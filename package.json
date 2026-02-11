@@ -1,0 +1,21 @@
+{
+  "name": "d-day-weather-web",
+  "version": "1.0.0",
+  "description": "그날의 날씨 - 10년간 날씨 데이터 분석 웹앱",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build:frontend": "cd frontend && npm install && npm run build",
+    "build:backend": "cd backend && npm install && npm run build",
+    "install:all": "cd backend && npm install && cd ../frontend && npm install"
+  },
+  "keywords": ["weather", "web", "react", "express"],
+  "author": "Yongjin",
+  "license": "MIT",
+  "devDependencies": {
+    "@vercel/node": "^3.0.21",
+    "@types/node": "^20.11.16"
+  }
+}
