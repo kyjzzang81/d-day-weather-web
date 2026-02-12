@@ -42,23 +42,34 @@ const WeatherStats: React.FC<WeatherStatsProps> = ({ statistics }) => {
   };
 
   return (
-    <div className="space-y-10">
-      {/* 도시명 */}
-      <div className="text-center">
-        <h2 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-          {statistics.city_korean || statistics.city}
-        </h2>
+    <div className="space-y-12 md:space-y-16">
+      {/* 도시명 - 더 눈에 띄는 디자인 */}
+      <div className="relative">
+        <div className="absolute inset-0 bg-gradient-to-r from-indigo-600/10 via-purple-600/10 to-pink-600/10 blur-3xl"></div>
+        <div className="relative text-center py-8 md:py-12">
+          <div className="inline-block mb-3 md:mb-4 text-4xl md:text-5xl animate-float">📍</div>
+          <h2 className="text-5xl md:text-7xl font-black bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent tracking-tight">
+            {statistics.city_korean || statistics.city}
+          </h2>
+          <div className="mt-4 md:mt-6 h-1 w-24 md:w-32 mx-auto bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-full"></div>
+        </div>
       </div>
 
-      {/* AI 총평 */}
-      <div className="card">
-        <div className="flex items-start gap-3 md:gap-4">
-          <div className="text-3xl md:text-4xl animate-float flex-shrink-0">🤖</div>
+      {/* AI 총평 - 더 강조된 디자인 */}
+      <div className="relative group">
+        <div className="absolute -inset-1 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-[36px] opacity-25 group-hover:opacity-40 blur-xl transition duration-500"></div>
+        <div className="relative card bg-gradient-to-br from-white/90 to-white/70">
+        <div className="flex items-start gap-4 md:gap-6">
+          <div className="flex-shrink-0">
+            <div className="text-4xl md:text-5xl animate-float bg-gradient-to-br from-indigo-100 to-purple-100 p-4 md:p-5 rounded-3xl border-2 border-indigo-200/50">
+              🤖
+            </div>
+          </div>
           <div className="flex-1">
-            <h3 className="text-lg md:text-xl font-bold mb-3 md:mb-4 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+            <h3 className="text-xl md:text-3xl font-black mb-4 md:mb-6 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
               AI 날씨 분석
             </h3>
-            <div className="text-sm md:text-base text-gray-700 leading-relaxed space-y-3">
+            <div className="text-sm md:text-lg text-gray-800 leading-relaxed space-y-4 md:space-y-5">
               {(() => {
                 const { weatherFrequency, temperature, precipitation } = statistics.statistics;
                 const totalDays = statistics.yearlyData.length;
@@ -118,50 +129,66 @@ const WeatherStats: React.FC<WeatherStatsProps> = ({ statistics }) => {
       {/* 10년간 시간대별 날씨 상세 */}
       {allYearlyData.length > 0 && (
         <div className="card">
-          <h3 className="text-xl md:text-2xl font-bold mb-6 md:mb-8 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-            10년간 {formatDateString(statistics.date)} 날씨
-          </h3>
-          <div className="space-y-3 md:space-y-4 relative z-10">
-            {allYearlyData.map((day) => {
+          <div className="flex items-center gap-3 md:gap-4 mb-8 md:mb-10">
+            <div className="text-3xl md:text-4xl">📅</div>
+            <h3 className="text-2xl md:text-4xl font-black bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+              10년간 {formatDateString(statistics.date)} 날씨
+            </h3>
+          </div>
+          <div className="space-y-4 md:space-y-5 relative z-10">
+            {allYearlyData.map((day, index) => {
               const year = day.date.substring(0, 4);
               const hasDetail = !!day.weather_detail;
               
               return (
                 <div 
                   key={day.date}
-                  className="p-4 md:p-5 rounded-2xl md:rounded-3xl bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-indigo-200/50 hover:scale-[1.01] md:hover:scale-[1.02] transition-transform duration-300"
+                  className="relative group"
+                  style={{ animationDelay: `${index * 50}ms` }}
                 >
+                  <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-[28px] opacity-0 group-hover:opacity-20 blur transition duration-500"></div>
+                  <div className="relative p-5 md:p-7 rounded-[26px] bg-gradient-to-br from-white via-indigo-50/50 to-purple-50/50 border-2 border-white/80 shadow-lg hover:shadow-2xl hover:scale-[1.01] transition-all duration-300">
                   {/* 모바일: 세로 배치, 데스크톱: 가로 배치 */}
-                  <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-6">
+                  <div className="flex flex-col md:flex-row md:items-center gap-5 md:gap-8">
                     {/* 연도 */}
-                    <div className="flex-shrink-0 md:w-20">
-                      <div className="text-lg md:text-xl font-bold text-gray-900">{year}년</div>
+                    <div className="flex-shrink-0 md:w-24">
+                      <div className="inline-block px-4 py-2 md:px-5 md:py-3 bg-gradient-to-br from-indigo-500 to-purple-500 text-white text-lg md:text-xl font-black rounded-2xl shadow-lg">
+                        {year}
+                      </div>
                     </div>
                     
                     {/* 시간대별 날씨 또는 기본 날씨 */}
                     {hasDetail ? (
                       <>
                         {/* 모바일: 2x2 그리드, 데스크톱: 1x4 그리드 */}
-                        <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
-                          <div className="text-center p-2 md:p-3 bg-white/70 rounded-xl md:rounded-2xl">
-                            <div className="text-[10px] md:text-xs text-gray-600 mb-1">🌙 새벽</div>
-                            <div className="text-xl md:text-2xl mb-1 animate-float">{getWeatherIcon(day.weather_detail!.period_summary.dawn)}</div>
-                            <div className="text-xs md:text-sm font-semibold">{day.weather_detail!.period_summary.dawn}</div>
+                        <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+                          <div className="text-center p-3 md:p-4 bg-gradient-to-br from-indigo-50 to-white rounded-2xl border border-indigo-100 hover:scale-105 transition-transform duration-300 shadow-sm">
+                            <div className="text-xs md:text-sm font-bold text-indigo-600 mb-2">🌙 새벽</div>
+                            <div className="text-2xl md:text-3xl mb-2 animate-float" style={{ animationDelay: `${index * 100}ms` }}>
+                              {getWeatherIcon(day.weather_detail!.period_summary.dawn)}
+                            </div>
+                            <div className="text-xs md:text-sm font-bold text-gray-800">{day.weather_detail!.period_summary.dawn}</div>
                           </div>
-                          <div className="text-center p-2 md:p-3 bg-white/70 rounded-xl md:rounded-2xl">
-                            <div className="text-[10px] md:text-xs text-gray-600 mb-1">🌅 오전</div>
-                            <div className="text-xl md:text-2xl mb-1 animate-float" style={{animationDelay: '0.2s'}}>{getWeatherIcon(day.weather_detail!.period_summary.morning)}</div>
-                            <div className="text-xs md:text-sm font-semibold">{day.weather_detail!.period_summary.morning}</div>
+                          <div className="text-center p-3 md:p-4 bg-gradient-to-br from-yellow-50 to-white rounded-2xl border border-yellow-100 hover:scale-105 transition-transform duration-300 shadow-sm">
+                            <div className="text-xs md:text-sm font-bold text-yellow-600 mb-2">🌅 오전</div>
+                            <div className="text-2xl md:text-3xl mb-2 animate-float" style={{ animationDelay: `${index * 100 + 100}ms` }}>
+                              {getWeatherIcon(day.weather_detail!.period_summary.morning)}
+                            </div>
+                            <div className="text-xs md:text-sm font-bold text-gray-800">{day.weather_detail!.period_summary.morning}</div>
                           </div>
-                          <div className="text-center p-2 md:p-3 bg-white/70 rounded-xl md:rounded-2xl">
-                            <div className="text-[10px] md:text-xs text-gray-600 mb-1">☀️ 오후</div>
-                            <div className="text-xl md:text-2xl mb-1 animate-float" style={{animationDelay: '0.4s'}}>{getWeatherIcon(day.weather_detail!.period_summary.afternoon)}</div>
-                            <div className="text-xs md:text-sm font-semibold">{day.weather_detail!.period_summary.afternoon}</div>
+                          <div className="text-center p-3 md:p-4 bg-gradient-to-br from-orange-50 to-white rounded-2xl border border-orange-100 hover:scale-105 transition-transform duration-300 shadow-sm">
+                            <div className="text-xs md:text-sm font-bold text-orange-600 mb-2">☀️ 오후</div>
+                            <div className="text-2xl md:text-3xl mb-2 animate-float" style={{ animationDelay: `${index * 100 + 200}ms` }}>
+                              {getWeatherIcon(day.weather_detail!.period_summary.afternoon)}
+                            </div>
+                            <div className="text-xs md:text-sm font-bold text-gray-800">{day.weather_detail!.period_summary.afternoon}</div>
                           </div>
-                          <div className="text-center p-2 md:p-3 bg-white/70 rounded-xl md:rounded-2xl">
-                            <div className="text-[10px] md:text-xs text-gray-600 mb-1">🌆 저녁</div>
-                            <div className="text-xl md:text-2xl mb-1 animate-float" style={{animationDelay: '0.6s'}}>{getWeatherIcon(day.weather_detail!.period_summary.evening)}</div>
-                            <div className="text-xs md:text-sm font-semibold">{day.weather_detail!.period_summary.evening}</div>
+                          <div className="text-center p-3 md:p-4 bg-gradient-to-br from-purple-50 to-white rounded-2xl border border-purple-100 hover:scale-105 transition-transform duration-300 shadow-sm">
+                            <div className="text-xs md:text-sm font-bold text-purple-600 mb-2">🌆 저녁</div>
+                            <div className="text-2xl md:text-3xl mb-2 animate-float" style={{ animationDelay: `${index * 100 + 300}ms` }}>
+                              {getWeatherIcon(day.weather_detail!.period_summary.evening)}
+                            </div>
+                            <div className="text-xs md:text-sm font-bold text-gray-800">{day.weather_detail!.period_summary.evening}</div>
                           </div>
                         </div>
                         
@@ -191,26 +218,34 @@ const WeatherStats: React.FC<WeatherStatsProps> = ({ statistics }) => {
                     ) : (
                       <>
                         {/* weather_detail이 없는 경우 4단계로 동일한 날씨 표시 */}
-                        <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
-                          <div className="text-center p-2 md:p-3 bg-white/70 rounded-xl md:rounded-2xl">
-                            <div className="text-[10px] md:text-xs text-gray-600 mb-1">🌙 새벽</div>
-                            <div className="text-xl md:text-2xl mb-1 animate-float">{getWeatherIcon(day.weather.label)}</div>
-                            <div className="text-xs md:text-sm font-semibold">{day.weather.label}</div>
+                        <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+                          <div className="text-center p-3 md:p-4 bg-gradient-to-br from-indigo-50 to-white rounded-2xl border border-indigo-100 hover:scale-105 transition-transform duration-300 shadow-sm">
+                            <div className="text-xs md:text-sm font-bold text-indigo-600 mb-2">🌙 새벽</div>
+                            <div className="text-2xl md:text-3xl mb-2 animate-float" style={{ animationDelay: `${index * 100}ms` }}>
+                              {getWeatherIcon(day.weather.label)}
+                            </div>
+                            <div className="text-xs md:text-sm font-bold text-gray-800">{day.weather.label}</div>
                           </div>
-                          <div className="text-center p-2 md:p-3 bg-white/70 rounded-xl md:rounded-2xl">
-                            <div className="text-[10px] md:text-xs text-gray-600 mb-1">🌅 오전</div>
-                            <div className="text-xl md:text-2xl mb-1 animate-float" style={{animationDelay: '0.2s'}}>{getWeatherIcon(day.weather.label)}</div>
-                            <div className="text-xs md:text-sm font-semibold">{day.weather.label}</div>
+                          <div className="text-center p-3 md:p-4 bg-gradient-to-br from-yellow-50 to-white rounded-2xl border border-yellow-100 hover:scale-105 transition-transform duration-300 shadow-sm">
+                            <div className="text-xs md:text-sm font-bold text-yellow-600 mb-2">🌅 오전</div>
+                            <div className="text-2xl md:text-3xl mb-2 animate-float" style={{ animationDelay: `${index * 100 + 100}ms` }}>
+                              {getWeatherIcon(day.weather.label)}
+                            </div>
+                            <div className="text-xs md:text-sm font-bold text-gray-800">{day.weather.label}</div>
                           </div>
-                          <div className="text-center p-2 md:p-3 bg-white/70 rounded-xl md:rounded-2xl">
-                            <div className="text-[10px] md:text-xs text-gray-600 mb-1">☀️ 오후</div>
-                            <div className="text-xl md:text-2xl mb-1 animate-float" style={{animationDelay: '0.4s'}}>{getWeatherIcon(day.weather.label)}</div>
-                            <div className="text-xs md:text-sm font-semibold">{day.weather.label}</div>
+                          <div className="text-center p-3 md:p-4 bg-gradient-to-br from-orange-50 to-white rounded-2xl border border-orange-100 hover:scale-105 transition-transform duration-300 shadow-sm">
+                            <div className="text-xs md:text-sm font-bold text-orange-600 mb-2">☀️ 오후</div>
+                            <div className="text-2xl md:text-3xl mb-2 animate-float" style={{ animationDelay: `${index * 100 + 200}ms` }}>
+                              {getWeatherIcon(day.weather.label)}
+                            </div>
+                            <div className="text-xs md:text-sm font-bold text-gray-800">{day.weather.label}</div>
                           </div>
-                          <div className="text-center p-2 md:p-3 bg-white/70 rounded-xl md:rounded-2xl">
-                            <div className="text-[10px] md:text-xs text-gray-600 mb-1">🌆 저녁</div>
-                            <div className="text-xl md:text-2xl mb-1 animate-float" style={{animationDelay: '0.6s'}}>{getWeatherIcon(day.weather.label)}</div>
-                            <div className="text-xs md:text-sm font-semibold">{day.weather.label}</div>
+                          <div className="text-center p-3 md:p-4 bg-gradient-to-br from-purple-50 to-white rounded-2xl border border-purple-100 hover:scale-105 transition-transform duration-300 shadow-sm">
+                            <div className="text-xs md:text-sm font-bold text-purple-600 mb-2">🌆 저녁</div>
+                            <div className="text-2xl md:text-3xl mb-2 animate-float" style={{ animationDelay: `${index * 100 + 300}ms` }}>
+                              {getWeatherIcon(day.weather.label)}
+                            </div>
+                            <div className="text-xs md:text-sm font-bold text-gray-800">{day.weather.label}</div>
                           </div>
                         </div>
                         
@@ -242,9 +277,12 @@ const WeatherStats: React.FC<WeatherStatsProps> = ({ statistics }) => {
 
       {/* 기온 통계 */}
       <div className="card">
-        <h3 className="text-xl md:text-2xl font-bold mb-6 md:mb-8 bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 bg-clip-text text-transparent">
-          기온 통계 (°C)
-        </h3>
+        <div className="flex items-center gap-3 md:gap-4 mb-8 md:mb-10">
+          <div className="text-3xl md:text-4xl">🌡️</div>
+          <h3 className="text-2xl md:text-4xl font-black bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 bg-clip-text text-transparent">
+            기온 통계
+          </h3>
+        </div>
         <div className="space-y-6 md:space-y-8 relative z-10">
           <StatRow
             label="최고 기온"
@@ -272,9 +310,12 @@ const WeatherStats: React.FC<WeatherStatsProps> = ({ statistics }) => {
 
       {/* 습도 통계 */}
       <div className="card">
-        <h3 className="text-xl md:text-2xl font-bold mb-6 md:mb-8 bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent">
-          습도 통계 (%)
-        </h3>
+        <div className="flex items-center gap-3 md:gap-4 mb-8 md:mb-10">
+          <div className="text-3xl md:text-4xl">💧</div>
+          <h3 className="text-2xl md:text-4xl font-black bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent">
+            습도 통계
+          </h3>
+        </div>
         <div className="relative z-10">
           <StatRow
             label="평균 습도"
@@ -288,28 +329,39 @@ const WeatherStats: React.FC<WeatherStatsProps> = ({ statistics }) => {
 
       {/* 강수량 통계 */}
       <div className="card">
-        <h3 className="text-xl md:text-2xl font-bold mb-6 md:mb-8 bg-gradient-to-r from-indigo-500 via-blue-500 to-cyan-500 bg-clip-text text-transparent">
-          강수량 통계
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 relative z-10">
-          <div className="text-center p-5 md:p-6 rounded-2xl md:rounded-3xl bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-200/50 hover:scale-105 transition-transform duration-300">
-            <div className="text-xs md:text-sm font-semibold text-blue-600 mb-2 md:mb-3 uppercase tracking-wide">최대 강수량</div>
-            <div className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent mb-2">
-              {precipitation.highest.toFixed(1)}
-              <span className="text-xl md:text-2xl ml-1">mm</span>
-            </div>
-            <div className="text-xs md:text-sm text-blue-700 font-medium">
-              {getRainDescription(precipitation.highest)}
+        <div className="flex items-center gap-3 md:gap-4 mb-8 md:mb-10">
+          <div className="text-3xl md:text-4xl">☔</div>
+          <h3 className="text-2xl md:text-4xl font-black bg-gradient-to-r from-indigo-500 via-blue-500 to-cyan-500 bg-clip-text text-transparent">
+            강수량 통계
+          </h3>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8 relative z-10">
+          <div className="relative group">
+            <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-3xl opacity-25 group-hover:opacity-40 blur transition duration-500"></div>
+            <div className="relative text-center p-6 md:p-8 rounded-[26px] bg-gradient-to-br from-blue-50 via-white to-cyan-50 border-2 border-white shadow-lg hover:shadow-2xl transition-all duration-300">
+              <div className="text-4xl md:text-5xl mb-3 md:mb-4">🌊</div>
+              <div className="text-sm md:text-base font-black text-blue-600 mb-3 md:mb-4 uppercase tracking-wider">최대 강수량</div>
+              <div className="text-5xl md:text-6xl font-black bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent mb-3">
+                {precipitation.highest.toFixed(1)}
+                <span className="text-2xl md:text-3xl ml-2">mm</span>
+              </div>
+              <div className="text-sm md:text-base text-blue-700 font-bold px-4 py-2 bg-blue-100/50 rounded-full inline-block">
+                {getRainDescription(precipitation.highest)}
+              </div>
             </div>
           </div>
-          <div className="text-center p-5 md:p-6 rounded-2xl md:rounded-3xl bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-indigo-200/50 hover:scale-105 transition-transform duration-300">
-            <div className="text-xs md:text-sm font-semibold text-indigo-600 mb-2 md:mb-3 uppercase tracking-wide">평균 강수량</div>
-            <div className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-2">
-              {precipitation.average.toFixed(1)}
-              <span className="text-xl md:text-2xl ml-1">mm</span>
-            </div>
-            <div className="text-xs md:text-sm text-indigo-700 font-medium">
-              {getRainDescription(precipitation.average)}
+          <div className="relative group">
+            <div className="absolute -inset-1 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-3xl opacity-25 group-hover:opacity-40 blur transition duration-500"></div>
+            <div className="relative text-center p-6 md:p-8 rounded-[26px] bg-gradient-to-br from-indigo-50 via-white to-purple-50 border-2 border-white shadow-lg hover:shadow-2xl transition-all duration-300">
+              <div className="text-4xl md:text-5xl mb-3 md:mb-4">💧</div>
+              <div className="text-sm md:text-base font-black text-indigo-600 mb-3 md:mb-4 uppercase tracking-wider">평균 강수량</div>
+              <div className="text-5xl md:text-6xl font-black bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-3">
+                {precipitation.average.toFixed(1)}
+                <span className="text-2xl md:text-3xl ml-2">mm</span>
+              </div>
+              <div className="text-sm md:text-base text-indigo-700 font-bold px-4 py-2 bg-indigo-100/50 rounded-full inline-block">
+                {getRainDescription(precipitation.average)}
+              </div>
             </div>
           </div>
         </div>
