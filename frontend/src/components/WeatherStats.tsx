@@ -43,6 +43,13 @@ const WeatherStats: React.FC<WeatherStatsProps> = ({ statistics }) => {
 
   return (
     <div className="space-y-10">
+      {/* 도시명 */}
+      <div className="text-center">
+        <h2 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+          {statistics.city_korean || statistics.city}
+        </h2>
+      </div>
+
       {/* AI 총평 */}
       <div className="card">
         <div className="flex items-start gap-3 md:gap-4">

@@ -116,11 +116,8 @@ const Home: React.FC = () => {
           <div className="flex flex-col md:flex-row items-center justify-between gap-6 md:gap-8 relative z-10">
             <div className="text-center md:text-left w-full md:w-auto">
               <div className="text-xs md:text-sm font-semibold text-indigo-600 mb-2 md:mb-3 uppercase tracking-wider">선택한 날짜</div>
-              <div className="text-3xl md:text-5xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-2 md:mb-3">
+              <div className="text-3xl md:text-5xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
                 {formatDate(currentDate)}
-              </div>
-              <div className="text-base md:text-lg text-gray-700 font-medium">
-                {getCityName(currentCity)}
               </div>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 md:gap-4 w-full sm:w-auto">
