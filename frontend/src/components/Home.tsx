@@ -70,26 +70,6 @@ const Home: React.FC = () => {
     return `${date.getMonth() + 1}월 ${date.getDate()}일`;
   };
 
-  const getCityName = (cityId: string) => {
-    // statistics에서 한글 도시명을 가져오거나, 없으면 기본 매핑 사용
-    if (statistics && statistics.city_korean) {
-      return statistics.city_korean;
-    }
-    
-    const cityNames: Record<string, string> = {
-      seoul: '서울',
-      busan: '부산',
-      incheon: '인천',
-      daegu: '대구',
-      daejeon: '대전',
-      gwangju: '광주',
-      ulsan: '울산',
-      jeju: '제주',
-      // 필요시 추가
-    };
-    return cityNames[cityId] || cityId;
-  };
-
   return (
     <div className="min-h-screen py-8 md:py-16 px-4 relative overflow-hidden">
       {/* Animated Background Blobs */}
