@@ -2,10 +2,10 @@
 
 export interface WeatherData {
   city: string;
-  city_korean: string;  // ✨ NEW: 한글 도시명
+  city_korean?: string;  // ✨ NEW: 한글 도시명 (optional)
   country: string;
-  lat: number;
-  lon: number;
+  lat?: number;
+  lon?: number;
   source: string;
   range: {
     start: string;
@@ -51,7 +51,7 @@ export interface TempStat {
 
 export interface WeatherStatistics {
   city: string;
-  city_korean: string;  // ✨ NEW: 한글 도시명
+  city_korean?: string;  // ✨ NEW: 한글 도시명 (optional)
   country: string;
   date: string; // MM-DD
   statistics: {

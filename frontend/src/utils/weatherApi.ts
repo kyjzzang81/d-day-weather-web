@@ -1,36 +1,7 @@
-import { WeatherStatistics, City } from '../types/weather';
+import { WeatherStatistics, City, WeatherData } from '../types/weather';
 
 // 개발 환경에서는 로컬 JSON 파일 사용
 const isDev = import.meta.env.DEV;
-
-// 날씨 데이터 타입
-interface DailyWeather {
-  date: string;
-  temp: {
-    max: number;
-    min: number;
-    avg: number;
-  };
-  humidity: number;
-  precipitation_mm: number;
-  weather: {
-    code: number;
-    label: string;
-  };
-}
-
-interface WeatherData {
-  city: string;
-  country: string;
-  lat: number;
-  lon: number;
-  source: string;
-  range: {
-    start: string;
-    end: string;
-  };
-  daily: DailyWeather[];
-}
 
 // 날씨 코드를 카테고리로 분류
 function categorizeWeather(code: number): 'clear' | 'cloudy' | 'rain' | 'snow' {
@@ -219,9 +190,9 @@ export const fetchCities = async (): Promise<City[]> => {
               name: data.city,
               nameKo: data.city_korean || data.city,
               country: data.country,
-              lat: data.lat,
-              lon: data.lon,
-            };
+              lat: data.lat || undefined,
+              lon: data.lon || undefined,
+            } as City;
           }
         } catch (error) {
           // 파일이 없으면 무시
@@ -230,7 +201,7 @@ export const fetchCities = async (): Promise<City[]> => {
       });
       
       const results = await Promise.all(promises);
-      cities.push(...results.filter((city): city is City => city !== null));
+      cities.push(...results.filter((city): city is City => city !== null && city.id !== undefined));
     }
     
     return cities.sort((a, b) => a.nameKo.localeCompare(b.nameKo, 'ko'));
