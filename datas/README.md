@@ -1,30 +1,40 @@
-# Weather Data Collection
+# Weather Data Collection (Enhanced with Hourly Analysis)
 
-전세계 138개 주요 도시의 10년간(2016-2025) 일일 날씨 데이터입니다.
+전세계 주요 도시의 10년간(2016-2025) 일일 날씨 데이터 + 시간별 분석 정보입니다.
 
 ## 📊 데이터 개요
 
 - **수집 기간**: 2016-01-01 ~ 2025-12-31 (10년, 3,653일)
-- **도시 수**: 138개 (한국 30개, 일본 22개, 중국 22개, 기타 64개)
 - **데이터 소스**: [Open-Meteo Historical Weather API](https://open-meteo.com/)
-- **수집 일자**: 2026년 2월 2일
-- **총 데이터량**: 504,114일 분량
+- **수집 일자**: 2026년 2월 12일
+- **현재 상태**: 25개 도시 수집 완료 (113개 도시는 API Rate Limit으로 재수집 대기 중)
+
+## 🆕 새로운 기능
+
+### 시간별 날씨 분석
+각 날짜마다 24시간 데이터를 분석하여 다음 정보를 제공합니다:
+
+- **시간대별 날씨 요약**: 새벽(0-6시), 오전(6-12시), 오후(12-18시), 저녁(18-24시)
+- **비 오는 시간 정보**: 비가 몇 시간 동안 내렸는지, 언제 시작해서 언제 끝났는지
+- **하루 날씨 요약**: "오전 맑다가 오후 비", "하루 종일 흐림" 등 자동 생성
+
+### 한글 도시명
+모든 도시에 한글명(`city_korean`) 필드가 추가되었습니다.
 
 ## 📁 파일 구조
 
 ```
 output/
-├── seoul.json          # 서울
+├── seoul.json          # 서울 (약 1.9MB)
 ├── busan.json          # 부산
 ├── tokyo.json          # 도쿄
-├── beijing.json        # 베이징
-└── ... (총 138개 파일)
+└── ... (총 138개 예정, 현재 25개)
 ```
 
 ### 파일 네이밍 규칙
 - 형식: `{city_id}.json`
 - city_id: 소문자 영문, 하이픈 구분 (예: `new-york`, `hong-kong`)
-- 한 파일당 약 900KB
+- 한 파일당 약 1.9MB (시간별 분석 포함)
 
 ## 📋 JSON 스키마
 
@@ -33,6 +43,7 @@ output/
 ```json
 {
   "city": "Seoul",              // 도시명 (영문)
+  "city_korean": "서울",        // 도시명 (한글) ✨ NEW
   "country": "KR",              // 국가 코드 (ISO 3166-1 alpha-2)
   "lat": 37.5665,               // 위도
   "lon": 126.978,               // 경도
@@ -50,14 +61,50 @@ output/
         "avg": 0.5              // 평균 기온 (°C)
       },
       "humidity": 77,           // 평균 상대습도 (%)
-      "precipitation_mm": 0.0,  // 강수량 (mm)
+      "precipitation_mm": 0.0,  // 강수량 (mm, 하루 전체 누적)
       "weather": {
         "code": 3,              // WMO weather code (0-99)
         "label": "흐림"         // 한글 날씨 설명
+      },
+      "weather_detail": {       // ✨ NEW: 시간별 분석
+        "period_summary": {
+          "dawn": "맑음",       // 새벽 (0-6시)
+          "morning": "구름 조금", // 오전 (6-12시)
+          "afternoon": "흐림",  // 오후 (12-18시)
+          "evening": "흐림"     // 저녁 (18-24시)
+        },
+        "rain_info": null,      // 비 정보 (비가 없으면 null)
+        "summary": "오전 구름 조금, 오후 흐림"  // 하루 날씨 요약
       }
     }
-    // ... (3,652개 더)
   ]
+}
+```
+
+### 비 오는 날 예시
+
+```json
+{
+  "date": "2024-07-02",
+  "precipitation_mm": 57.6,
+  "weather": {
+    "code": 61,
+    "label": "비"
+  },
+  "weather_detail": {
+    "period_summary": {
+      "dawn": "흐림",
+      "morning": "비",
+      "afternoon": "비",
+      "evening": "이슬비"
+    },
+    "rain_info": {
+      "hours": 14,           // 비 온 시간: 14시간
+      "start_hour": 9,       // 시작: 오전 9시
+      "end_hour": 23         // 종료: 오후 11시
+    },
+    "summary": "오전부터 저녁까지 비"
+  }
 }
 ```
 
@@ -82,28 +129,35 @@ output/
 
 전체 코드 매핑: `../config/wmo_weather_codes.json` 참조
 
-## 🌍 수집 도시 목록
+## 🌍 수집 완료 도시 (25개)
 
-### 한국 (30개)
-서울, 부산, 인천, 대구, 대전, 광주, 울산, 세종, 수원, 고양, 용인, 창원, 성남, 청주, 전주, 천안, 안산, 부천, 안양, 남양주, 포항, 진주, 여수, 순천, 제주, 서귀포, 춘천, 강릉, 속초, 원주
+### 한국 (12개)
+서울, 인천, 수원, 용인, 성남, 고양, 전주, 청주, 울산, 거제, 통영, 군산
 
-### 일본 (22개)
-도쿄, 오사카, 교토, 요코하마, 나고야, 삿포로, 후쿠오카, 고베, 히로시마, 센다이, 니가타, 가나자와, 나하, 나라, 하코다테, 오타루, 아사히카와, 벳푸, 다카마쓰, 마쓰야마, 기타큐슈, 후지산
+### 중국 (6개)
+시안, 광저우, 선전, 마카오, 위해, 대련
 
-### 중국 (22개)
-베이징, 상하이, 홍콩, 광저우, 선전, 청두, 항저우, 시안, 충칭, 난징, 우한, 텐진, 쑤저우, 우시, 난창, 샤먼, 칭다오, 마카오, 구이린, 장자제, 황산, 라싸
+### 일본 (6개)
+아사히카와, 나가사키, 벳푸, 유후인, 이시가키, 오키나와(나하)
 
-### 동남아시아 (39개)
-방콕, 싱가포르, 쿠알라룸푸르, 하노이, 호치민, 발리, 푸켓, 세부, 마닐라, 등 (베트남 11, 태국 8, 필리핀 6, 말레이시아 4, 인도네시아 4, 대만 5, 싱가포르 1개)
+### 베트남 (1개)
+푸꾸옥
 
-### 미국·유럽 (25개)
-뉴욕, 로스앤젤레스, 샌프란시스코, 라스베가스, 시애틀, 하와이, 괌, 사이판, 파리, 런던, 로마, 밀라노, 바르셀로나, 마드리드, 프라하, 비엔나, 베를린, 암스테르담, 부다페스트, 취리히, 제네바 등
+## ⏳ 수집 예정 (113개)
 
-전체 목록: `../config/cities.json` 참조
+나머지 도시들은 API Rate Limit으로 인해 재수집 대기 중입니다.
+
+### 재수집 방법
+```bash
+# 내일 다시 실행 (10초 간격으로 안전하게 수집)
+./scripts/retry_failed_cities.sh
+```
+
+실패한 도시 목록: `failed_cities_retry.txt` 참조
 
 ## ✨ 데이터 품질
 
-- **완성도**: 100% (결측값 없음)
+- **완성도**: 수집된 도시는 100% (결측값 없음)
 - **정확도**: Open-Meteo의 검증된 관측 데이터 사용
 - **일관성**: 모든 도시 동일한 포맷 및 기간
 
@@ -112,6 +166,7 @@ output/
 ✅ 강수량(precipitation): 100% 완전  
 ✅ 온도(temp): 100% 완전  
 ✅ 습도(humidity): 100% 완전  
+✅ 시간별 분석(weather_detail): 100% 완전 ✨ NEW  
 
 ## 🔧 사용 예시
 
@@ -119,38 +174,35 @@ output/
 
 ```python
 import json
-from pathlib import Path
 
 # 데이터 로드
 with open('output/seoul.json', 'r', encoding='utf-8') as f:
     data = json.load(f)
 
 # 기본 정보
-print(f"도시: {data['city']} ({data['country']})")
+print(f"도시: {data['city_korean']} ({data['city']})")
 print(f"기간: {data['range']['start']} ~ {data['range']['end']}")
-print(f"총 일수: {len(data['daily'])}일")
 
 # 특정 날짜 조회
 for day in data['daily']:
-    if day['date'] == '2024-01-01':
-        print(f"2024년 1월 1일 서울")
-        print(f"  최고 기온: {day['temp']['max']}°C")
-        print(f"  최저 기온: {day['temp']['min']}°C")
-        print(f"  날씨: {day['weather']['label']}")
+    if day['date'] == '2024-07-02':
+        print(f"\n2024년 7월 2일 {data['city_korean']}")
+        print(f"  기온: {day['temp']['min']}°C ~ {day['temp']['max']}°C")
         print(f"  강수량: {day['precipitation_mm']}mm")
+        print(f"  날씨 요약: {day['weather_detail']['summary']}")
+        
+        # 시간대별 날씨
+        periods = day['weather_detail']['period_summary']
+        print(f"  새벽: {periods['dawn']}")
+        print(f"  오전: {periods['morning']}")
+        print(f"  오후: {periods['afternoon']}")
+        print(f"  저녁: {periods['evening']}")
+        
+        # 비 정보
+        if day['weather_detail']['rain_info']:
+            rain = day['weather_detail']['rain_info']
+            print(f"  비: {rain['hours']}시간 ({rain['start_hour']}시~{rain['end_hour']}시)")
         break
-
-# 월별 평균 기온 계산
-from collections import defaultdict
-
-monthly_temps = defaultdict(list)
-for day in data['daily']:
-    month = day['date'][:7]  # YYYY-MM
-    monthly_temps[month].append(day['temp']['avg'])
-
-for month, temps in sorted(monthly_temps.items()):
-    avg_temp = sum(temps) / len(temps)
-    print(f"{month}: {avg_temp:.1f}°C")
 ```
 
 ### JavaScript (Node.js)
@@ -162,31 +214,21 @@ const fs = require('fs');
 const data = JSON.parse(fs.readFileSync('output/seoul.json', 'utf-8'));
 
 // 기본 정보
-console.log(`도시: ${data.city} (${data.country})`);
+console.log(`도시: ${data.city_korean} (${data.city})`);
 console.log(`기간: ${data.range.start} ~ ${data.range.end}`);
-console.log(`총 일수: ${data.daily.length}일`);
 
-// 특정 날짜 조회
-const day = data.daily.find(d => d.date === '2024-01-01');
-if (day) {
-  console.log('2024년 1월 1일 서울');
-  console.log(`  최고 기온: ${day.temp.max}°C`);
-  console.log(`  최저 기온: ${day.temp.min}°C`);
-  console.log(`  날씨: ${day.weather.label}`);
-  console.log(`  강수량: ${day.precipitation_mm}mm`);
-}
-
-// 연도별 평균 기온
-const yearlyTemps = {};
-data.daily.forEach(day => {
-  const year = day.date.substring(0, 4);
-  if (!yearlyTemps[year]) yearlyTemps[year] = [];
-  yearlyTemps[year].push(day.temp.avg);
+// 비 오는 날만 필터링
+const rainyDays = data.daily.filter(d => {
+  const rain = d.weather_detail?.rain_info;
+  return rain && rain.hours >= 5;  // 5시간 이상 비
 });
 
-Object.keys(yearlyTemps).sort().forEach(year => {
-  const avgTemp = yearlyTemps[year].reduce((a, b) => a + b) / yearlyTemps[year].length;
-  console.log(`${year}: ${avgTemp.toFixed(1)}°C`);
+console.log(`\n5시간 이상 비가 온 날: ${rainyDays.length}일`);
+
+rainyDays.slice(0, 5).forEach(day => {
+  const rain = day.weather_detail.rain_info;
+  console.log(`${day.date}: ${day.precipitation_mm}mm, ${rain.hours}시간`);
+  console.log(`  → ${day.weather_detail.summary}`);
 });
 ```
 
@@ -195,6 +237,7 @@ Object.keys(yearlyTemps).sort().forEach(year => {
 ```typescript
 interface WeatherData {
   city: string;
+  city_korean: string;  // ✨ NEW
   country: string;
   lat: number;
   lon: number;
@@ -214,10 +257,24 @@ interface DailyWeather {
     avg: number;   // °C
   };
   humidity: number;           // %
-  precipitation_mm: number;   // mm
+  precipitation_mm: number;   // mm (하루 전체 누적)
   weather: {
     code: number;             // WMO code (0-99)
     label: string;            // 한글 날씨
+  };
+  weather_detail?: {          // ✨ NEW
+    period_summary: {
+      dawn: string;           // 새벽 날씨
+      morning: string;        // 오전 날씨
+      afternoon: string;      // 오후 날씨
+      evening: string;        // 저녁 날씨
+    };
+    rain_info: {
+      hours: number;          // 비 온 시간 수
+      start_hour: number;     // 시작 시간 (0-23)
+      end_hour: number;       // 종료 시간 (0-23)
+    } | null;
+    summary: string;          // 하루 날씨 요약
   };
 }
 ```
@@ -228,21 +285,35 @@ interface DailyWeather {
    - 모든 날짜는 해당 도시의 **로컬 시간대** 기준
    - UTC가 아닌 각 도시의 현지 시간
 
-2. **윤년 처리**
+2. **강수량**
+   - `precipitation_mm`: 하루 전체 누적 강수량 (시간당 아님!)
+   - 예: 15.0mm = 그 날 하루 동안 총 15mm의 비
+
+3. **시간별 분석**
+   - `weather_detail`는 24시간 데이터를 분석하여 자동 생성
+   - 시간대 구분: 새벽(0-6시), 오전(6-12시), 오후(12-18시), 저녁(18-24시)
+
+4. **윤년 처리**
    - 2016년, 2020년, 2024년: 366일 (윤년)
    - 나머지 연도: 365일
 
-3. **결측값**
-   - 현재 데이터에는 결측값이 없음
-   - 만약 결측이 있다면 `null`로 표시됨
+5. **파일 크기**
+   - 개별 파일: 약 1.9MB (시간별 분석 포함)
+   - 완료 예정 전체 크기: 약 260MB (138개 도시)
+   - 현재 수집 완료: 약 50MB (25개 도시)
 
-4. **파일 크기**
-   - 전체 138개 파일: 약 122MB
-   - 개별 파일: 약 900KB
-
-5. **데이터 갱신**
+6. **데이터 갱신**
    - 정적 데이터 (2016-2025년 고정)
    - 실시간 날씨가 아닌 과거 관측 데이터
+
+## 🚀 API Rate Limit 정보
+
+Open-Meteo API는 다음과 같은 제한이 있습니다:
+- **무료 플랜**: 하루 10,000 requests
+- **권장 호출 간격**: 10초 이상 (시간별 데이터 포함 시)
+
+시간별 데이터를 포함하면 한 번의 요청으로 약 87,672개의 시간 데이터를 받아오므로,
+요청 간격을 충분히 두는 것이 중요합니다.
 
 ## 📖 추가 문서
 
@@ -250,6 +321,7 @@ interface DailyWeather {
 - 도시 목록: `../config/cities.json`
 - 날씨 코드: `../config/wmo_weather_codes.json`
 - 수집 스크립트: `../scripts/`
+- 재수집 스크립트: `../scripts/retry_failed_cities.sh`
 
 ## 📄 라이센스
 
@@ -258,9 +330,11 @@ interface DailyWeather {
 ## 🔗 관련 링크
 
 - [Open-Meteo API Documentation](https://open-meteo.com/en/docs)
+- [Open-Meteo Historical Weather API](https://open-meteo.com/en/docs/historical-weather-api)
 - [WMO Weather Code](https://www.nodc.noaa.gov/archive/arc0021/0002199/1.1/data/0-data/HTML/WMO-CODE/WMO4677.HTM)
 
 ---
 
-**수집 일자**: 2026-02-02  
-**데이터 버전**: 1.0
+**수집 일자**: 2026-02-12  
+**데이터 버전**: 2.0 (Enhanced with Hourly Analysis)  
+**현재 상태**: 25/138 도시 완료 (나머지 재수집 예정)

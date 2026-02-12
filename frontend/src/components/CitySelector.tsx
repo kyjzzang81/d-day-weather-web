@@ -55,12 +55,17 @@ const CitySelector: React.FC<CitySelectorProps> = ({
 
   return (
     <div className="dialog-overlay" onClick={onClose}>
-      <div className="dialog-content max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-800">도시 선택</h2>
+      <div className="dialog-content max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-10 relative z-10">
+          <h2 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+            도시 선택
+          </h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-2xl"
+            className="w-12 h-12 flex items-center justify-center text-gray-400 hover:text-white 
+                     bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600
+                     rounded-full transition-all text-2xl font-bold shadow-lg hover:shadow-glow-pink
+                     hover:scale-110 active:scale-95"
             aria-label="닫기"
           >
             ×
@@ -68,48 +73,71 @@ const CitySelector: React.FC<CitySelectorProps> = ({
         </div>
 
         {/* 검색 입력 */}
-        <div className="mb-4">
-          <input
-            type="text"
-            placeholder="도시 검색..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-          />
+        <div className="mb-8 relative z-10">
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="도시 검색..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full px-6 py-4 bg-gradient-to-r from-purple-50 to-pink-50 
+                       border-2 border-purple-200/50 rounded-[20px] 
+                       focus:outline-none focus:ring-4 focus:ring-purple-300/30 focus:border-purple-400
+                       transition-all text-base placeholder-gray-500 font-medium"
+            />
+            <span className="absolute right-5 top-1/2 -translate-y-1/2 text-2xl">🔍</span>
+          </div>
         </div>
 
         {/* 도시 목록 */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto relative z-10">
           {loading && (
-            <div className="text-center py-8 text-gray-500">로딩 중...</div>
+            <div className="text-center py-16">
+              <div className="inline-block relative">
+                <div className="w-16 h-16 border-[3px] border-purple-200 rounded-full"></div>
+                <div className="absolute top-0 left-0 w-16 h-16 border-[3px] border-transparent border-t-purple-600 rounded-full animate-spin"></div>
+              </div>
+              <p className="mt-6 text-gray-600 font-semibold">로딩 중...</p>
+            </div>
           )}
 
           {error && (
-            <div className="text-center py-8 text-red-600">{error}</div>
+            <div className="text-center py-16">
+              <div className="text-5xl mb-4">😢</div>
+              <p className="text-red-600 font-semibold text-lg">{error}</p>
+            </div>
           )}
 
           {!loading && !error && filteredCities.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              검색 결과가 없습니다.
+            <div className="text-center py-16">
+              <div className="text-5xl mb-4">🔍</div>
+              <p className="text-gray-500 font-semibold text-lg">
+                검색 결과가 없습니다.
+              </p>
             </div>
           )}
 
           {!loading && !error && filteredCities.length > 0 && (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {filteredCities.map((city) => (
                 <button
                   key={city.id}
                   onClick={() => handleSelectCity(city.id)}
-                  className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${
-                    city.id === currentCity
-                      ? 'bg-primary-100 border-2 border-primary-500'
-                      : 'bg-gray-50 hover:bg-gray-100 border-2 border-transparent'
-                  }`}
+                  className={`w-full text-left px-6 py-5 rounded-[25px] transition-all duration-300
+                    ${
+                      city.id === currentCity
+                        ? 'bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white shadow-liquid-lg scale-105'
+                        : 'bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 border-2 border-purple-200/50 hover:shadow-liquid hover:scale-105'
+                    }`}
                 >
-                  <div className="font-medium text-gray-900">
-                    {city.nameKo} {city.id === currentCity && '✓'}
+                  <div className={`font-bold text-lg ${
+                    city.id === currentCity ? 'text-white' : 'text-gray-900'
+                  }`}>
+                    {city.nameKo} {city.id === currentCity && '✨'}
                   </div>
-                  <div className="text-sm text-gray-500">
+                  <div className={`text-sm mt-1 ${
+                    city.id === currentCity ? 'text-white/90' : 'text-gray-600'
+                  }`}>
                     {city.name}, {city.country}
                   </div>
                 </button>
@@ -118,7 +146,7 @@ const CitySelector: React.FC<CitySelectorProps> = ({
           )}
         </div>
 
-        <div className="mt-6 flex justify-end">
+        <div className="mt-8 flex justify-end relative z-10">
           <button onClick={onClose} className="btn-secondary">
             닫기
           </button>

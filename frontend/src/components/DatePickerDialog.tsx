@@ -29,18 +29,23 @@ const DatePickerDialog: React.FC<DatePickerDialogProps> = ({
   return (
     <div className="dialog-overlay" onClick={onClose}>
       <div className="dialog-content" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-800">날짜 선택</h2>
+        <div className="flex items-center justify-between mb-10 relative z-10">
+          <h2 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+            날짜 선택
+          </h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-2xl"
+            className="w-12 h-12 flex items-center justify-center text-gray-400 hover:text-white 
+                     bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600
+                     rounded-full transition-all text-2xl font-bold shadow-lg hover:shadow-glow-pink
+                     hover:scale-110 active:scale-95"
             aria-label="닫기"
           >
             ×
           </button>
         </div>
 
-        <div className="flex justify-center mb-6">
+        <div className="flex justify-center mb-10 relative z-10">
           <DatePicker
             selected={selectedDate}
             onChange={(date) => date && setSelectedDate(date)}
@@ -51,7 +56,7 @@ const DatePickerDialog: React.FC<DatePickerDialogProps> = ({
           />
         </div>
 
-        <div className="flex gap-3 justify-end">
+        <div className="flex gap-4 justify-end relative z-10">
           <button onClick={onClose} className="btn-secondary">
             취소
           </button>
