@@ -212,7 +212,6 @@ function getSummaryText(
   stats: WeatherStatistics['statistics']
 ): string {
   const maxTemp = Math.round(stats.temperature.max.average);
-  const minTemp = Math.round(stats.temperature.min.average);
   const rainPct = Math.round(stats.rainProbability);
   const diurnal = Math.round(stats.temperature.max.average - stats.temperature.min.average);
 
@@ -282,7 +281,7 @@ function getActivities(
   tempGrade: TempGrade,
   skyGrade: SkyGrade,
   rainGrade: RainGrade,
-  flags: string[]
+  _flags: string[]
 ): ActivityItem[] {
   type ActivityDef = { icon: string; name: string; reason: string; tag: string; isBest: boolean };
   const A: Record<string, ActivityDef> = {
@@ -453,19 +452,6 @@ function getTrendText(
 }
 
 // ─── 인근 날짜 추천 ─────────────────────────────────────────────────────────
-function weatherEmoji(code: number): string {
-  if (code === 0) return '☀️';
-  if (code === 1) return '🌤️';
-  if (code === 2) return '⛅';
-  if (code === 3) return '☁️';
-  if (code === 45 || code === 48) return '🌫️';
-  if ((code >= 71 && code <= 77) || code === 85 || code === 86) return '❄️';
-  if (code >= 80 && code <= 82) return '🌦️';
-  if (code >= 51 && code <= 67) return '🌧️';
-  if (code >= 95) return '⛈️';
-  return '🌤️';
-}
-
 function buildNearbyRecs(
   nearbyDates: NearbyDateStats[] | undefined,
   targetStats: WeatherStatistics['statistics'],
