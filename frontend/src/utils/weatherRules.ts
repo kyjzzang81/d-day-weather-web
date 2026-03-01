@@ -151,7 +151,8 @@ function getFlags(
 function getVerdict(
   tempGrade: TempGrade,
   rainGrade: RainGrade,
-  flags: string[]
+  flags: string[],
+  avgPrecipMm?: number
 ): VerdictInfo {
   // 특수 조합 오버라이드
   if (flags.includes('WINDY') && tempGrade === 'COLD') {
@@ -194,11 +195,22 @@ function getVerdict(
     },
   };
 
-  const v = matrix[tempGrade][rainGrade];
-  // SNOW 플래그 → 한 단계 하향
+  let v = matrix[tempGrade][rainGrade];
+
   if (flags.includes('SNOW') && v.stars > 0) {
-    return { ...v, stars: v.stars - 1, label: v.label + ' (눈 주의)' };
+    v = { ...v, stars: v.stars - 1, label: v.label + ' (눈 주의)' };
   }
+
+  if (avgPrecipMm !== undefined && rainGrade !== 'NO_RAIN') {
+    let precipHint = '';
+    if (avgPrecipMm < 1) precipHint = '';
+    else if (avgPrecipMm < 5) precipHint = ` 평균 ${avgPrecipMm.toFixed(1)}mm로 가볍게 내리는 정도예요.`;
+    else if (avgPrecipMm < 15) precipHint = ` 평균 ${avgPrecipMm.toFixed(1)}mm로 우산은 꼭 챙기세요.`;
+    else if (avgPrecipMm < 30) precipHint = ` 평균 ${avgPrecipMm.toFixed(1)}mm로 꽤 많이 내려요. 방수 준비를 하세요.`;
+    else precipHint = ` 평균 ${avgPrecipMm.toFixed(1)}mm로 폭우 수준이에요. 야외 일정은 최소화하세요.`;
+    if (precipHint) v = { ...v, desc: v.desc + precipHint };
+  }
+
   return v;
 }
 
@@ -238,11 +250,19 @@ function getSummaryText(
     },
   };
 
+  const avgMm = stats.precipitation.average;
+  const precipDesc =
+    avgMm < 1 ? '' :
+    avgMm < 5 ? ` 강수량은 평균 **${avgMm.toFixed(1)}mm**로 가벼운 수준이에요.` :
+    avgMm < 15 ? ` 평균 강수량이 **${avgMm.toFixed(1)}mm**로 우산은 꼭 챙기세요.` :
+    avgMm < 30 ? ` 평균 **${avgMm.toFixed(1)}mm** 정도 내려요. 방수 준비가 필요해요.` :
+    ` 평균 **${avgMm.toFixed(1)}mm**로 폭우 가능성이 있어요. 야외 일정은 최소화하세요.`;
+
   const rainText: Record<RainGrade, string> = {
     NO_RAIN:   '',
-    LOW_RAIN:  ' 비나 눈 올 확률은 낮지만, 우산 하나 챙겨두면 안심이에요.',
-    MID_RAIN:  ` 비나 눈 올 확률도 **약 ${rainPct}%** 있어요.`,
-    HIGH_RAIN: ' 비가 올 가능성이 높아요. 우산은 필수예요.',
+    LOW_RAIN:  ' 비나 눈 올 확률은 낮지만, 우산 하나 챙겨두면 안심이에요.' + precipDesc,
+    MID_RAIN:  ` 비나 눈 올 확률도 **약 ${rainPct}%** 있어요.` + precipDesc,
+    HIGH_RAIN: ' 비가 올 가능성이 높아요. 우산은 필수예요.' + precipDesc,
   };
 
   let text = skyText[tempGrade][skyGrade] + rainText[rainGrade];
@@ -514,7 +534,7 @@ export function analyzeWeather(stats: WeatherStatistics): WeatherAnalysis {
   const skyGrade = getSkyGrade(s.clearProbability);
   const season = getSeason(mm, cityLat ?? 37, s.precipitation.average);
   const flags = getFlags(s, tempGrade);
-  const verdict = getVerdict(tempGrade, rainGrade, flags);
+  const verdict = getVerdict(tempGrade, rainGrade, flags, s.precipitation.average);
   const summaryText = getSummaryText(tempGrade, skyGrade, rainGrade, flags, season, s);
   const bestTimeText = getBestTimeText(s.hourlyAverages);
   const activities = getActivities(tempGrade, skyGrade, rainGrade, flags);
