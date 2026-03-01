@@ -1,24 +1,35 @@
-import { WeatherStatistics, City, WeatherData } from '../types/weather';
+import { supabase } from '../lib/supabase';
+import {
+  WeatherStatistics,
+  City,
+  HourlyWeatherRow,
+  HourlyDataPoint,
+  YearlyDayData,
+  TempStat,
+  HourlyAverage,
+  NearbyDateStats,
+} from '../types/weather';
 
-// 개발 환경에서는 로컬 JSON 파일 사용
-const isDev = import.meta.env.DEV;
+const YEAR_START = 2016;
+const YEAR_END = 2025;
+const NEARBY_DAYS = 7;
 
-// 날씨 코드를 카테고리로 분류
+// ─── 유틸 ────────────────────────────────────────────────────────────────────
+
 function categorizeWeather(code: number): 'clear' | 'cloudy' | 'rain' | 'snow' {
   if (code <= 1) return 'clear';
   if (code <= 3) return 'cloudy';
-  if (code >= 71 && code <= 77) return 'snow';
-  if (code >= 85 && code <= 86) return 'snow';
-  if (code >= 51 && code <= 67) return 'rain';
-  if (code >= 80 && code <= 82) return 'rain';
+  if ((code >= 71 && code <= 77) || code === 85 || code === 86) return 'snow';
+  if (
+    (code >= 51 && code <= 67) ||
+    (code >= 80 && code <= 82) ||
+    code === 95 || code === 96 || code === 99
+  ) return 'rain';
   return 'cloudy';
 }
 
-// 온도 통계 계산
-function calculateTempStat(values: number[]) {
-  if (values.length === 0) {
-    return { highest: 0, lowest: 0, average: 0 };
-  }
+function calcTempStat(values: number[]): TempStat {
+  if (values.length === 0) return { highest: 0, lowest: 0, average: 0 };
   return {
     highest: Math.max(...values),
     lowest: Math.min(...values),
@@ -26,207 +37,396 @@ function calculateTempStat(values: number[]) {
   };
 }
 
+function getDominantCode(codes: number[]): number {
+  if (codes.length === 0) return 0;
+  const cnt: Record<number, number> = {};
+  codes.forEach((c) => { cnt[c] = (cnt[c] || 0) + 1; });
+  return Number(Object.entries(cnt).sort((a, b) => b[1] - a[1])[0][0]);
+}
+
+function rowToHourlyPoint(row: HourlyWeatherRow): HourlyDataPoint {
+  return {
+    hour: new Date(row.timestamp).getUTCHours(),
+    temperature: row.temperature,
+    apparent_temp: row.apparent_temp,
+    humidity: row.humidity,
+    precipitation: row.precipitation,
+    rain: row.rain,
+    snowfall: row.snowfall,
+    weather_code: row.weather_code,
+    cloud_cover: row.cloud_cover,
+    wind_speed: row.wind_speed,
+    wind_gusts: row.wind_gusts,
+  };
+}
+
+function buildYearlyDayData(
+  year: number,
+  date: string,
+  rows: HourlyWeatherRow[]
+): YearlyDayData {
+  if (rows.length === 0) {
+    return {
+      year, date, hours: [],
+      tempMax: 0, tempMin: 0, tempAvg: 0,
+      totalPrecipitation: 0, totalRain: 0, totalSnowfall: 0,
+      avgWindSpeed: 0, maxWindGust: 0, avgApparentTemp: 0,
+      dominantWeatherCode: 0,
+    };
+  }
+
+  const hours = rows.map(rowToHourlyPoint).sort((a, b) => a.hour - b.hour);
+  const temps = rows.map((r) => r.temperature);
+  const totalPrecipitation = rows.reduce((s, r) => s + r.precipitation, 0);
+  const totalRain = rows.reduce((s, r) => s + r.rain, 0);
+  const totalSnowfall = rows.reduce((s, r) => s + r.snowfall, 0);
+  const avgWindSpeed = rows.reduce((s, r) => s + r.wind_speed, 0) / rows.length;
+  const maxWindGust = Math.max(...rows.map((r) => r.wind_gusts));
+
+  // 주간(6-18시 UTC) 체감온도 평균
+  const daytime = rows.filter((r) => {
+    const h = new Date(r.timestamp).getUTCHours();
+    return h >= 6 && h < 18;
+  });
+  const apparentSrc = daytime.length > 0 ? daytime : rows;
+  const avgApparentTemp =
+    apparentSrc.reduce((s, r) => s + r.apparent_temp, 0) / apparentSrc.length;
+
+  return {
+    year, date, hours,
+    tempMax: Math.max(...temps),
+    tempMin: Math.min(...temps),
+    tempAvg: temps.reduce((a, b) => a + b, 0) / temps.length,
+    totalPrecipitation, totalRain, totalSnowfall,
+    avgWindSpeed, maxWindGust, avgApparentTemp,
+    dominantWeatherCode: getDominantCode(rows.map((r) => r.weather_code)),
+  };
+}
+
+// ─── 메인 함수 ────────────────────────────────────────────────────────────────
+
 export const fetchWeatherStatistics = async (
-  city: string,
+  cityId: string,
   month: number,
   day: number
 ): Promise<WeatherStatistics> => {
-  if (isDev) {
-    // 개발 환경: 로컬 JSON 파일 직접 읽기
-    try {
-      const response = await fetch(`/${city}.json`);
-      if (!response.ok) {
-        throw new Error(`City ${city} not found`);
-      }
-      
-      const weatherData: WeatherData = await response.json();
-      
-      // 해당 월-일 데이터 필터링
-      const targetDate = `${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      const dailyData = weatherData.daily.filter((daily) => {
-        const monthDay = daily.date.substring(5); // MM-DD
-        return monthDay === targetDate;
-      });
-      
-      if (dailyData.length === 0) {
-        throw new Error(`No data found for ${month}-${day}`);
-      }
-      
-      // 날씨 빈도 계산
-      const weatherFrequency = {
-        clear: 0,
-        cloudy: 0,
-        rain: 0,
-        snow: 0,
-      };
-      
-      dailyData.forEach((daily) => {
-        const category = categorizeWeather(daily.weather.code);
-        weatherFrequency[category]++;
-      });
-      
-      // 온도 통계 계산
-      const maxTemps = dailyData.map((d) => d.temp.max);
-      const minTemps = dailyData.map((d) => d.temp.min);
-      const avgTemps = dailyData.map((d) => d.temp.avg);
-      
-      const temperature = {
-        max: calculateTempStat(maxTemps),
-        min: calculateTempStat(minTemps),
-        avg: calculateTempStat(avgTemps),
-      };
-      
-      // 습도 통계 계산
-      const humidities = dailyData.map((d) => d.humidity);
-      const humidity = {
+  const mm = String(month).padStart(2, '0');
+  const dd = String(day).padStart(2, '0');
+  const years = Array.from(
+    { length: YEAR_END - YEAR_START + 1 },
+    (_, i) => YEAR_START + i
+  );
+
+  // 연도별 ±7일 범위 계산
+  const yearRanges = years.map((year) => {
+    const target = new Date(Date.UTC(year, month - 1, day));
+    const start = new Date(target);
+    start.setUTCDate(start.getUTCDate() - NEARBY_DAYS);
+    const end = new Date(target);
+    end.setUTCDate(end.getUTCDate() + NEARBY_DAYS + 1);
+    return {
+      year,
+      startDate: start.toISOString(),
+      endDate: end.toISOString(),
+      targetDate: target.toISOString().split('T')[0],
+    };
+  });
+
+  // 병렬 조회: 도시 정보 + 연도별 ±7일 데이터
+  const [cityResult, ...yearResults] = await Promise.all([
+    supabase
+      .from('cities')
+      .select('id, name_en, name_ko, country, lat, lon')
+      .eq('id', cityId)
+      .single(),
+    ...yearRanges.map(({ startDate, endDate }) =>
+      supabase
+        .from('hourly_weather')
+        .select(
+          'city_id, timestamp, temperature, apparent_temp, humidity, precipitation, rain, snowfall, weather_code, cloud_cover, wind_speed, wind_direction, wind_gusts'
+        )
+        .eq('city_id', cityId)
+        .gte('timestamp', startDate)
+        .lt('timestamp', endDate)
+        .order('timestamp')
+    ),
+  ]);
+
+  const city = cityResult.data ?? {
+    name_en: cityId,
+    name_ko: cityId,
+    country: '',
+    lat: null,
+    lon: null,
+  };
+
+  // 연도별 데이터 구성 + 인근 날짜 수집
+  const yearlyData: YearlyDayData[] = [];
+  const nearbyMap = new Map<
+    string,
+    { rows: HourlyWeatherRow[]; year: number }[]
+  >();
+
+  yearRanges.forEach(({ year, targetDate }, i) => {
+    const allRows = (yearResults[i].data as HourlyWeatherRow[]) || [];
+
+    // UTC 날짜별 그룹화
+    const byDate = new Map<string, HourlyWeatherRow[]>();
+    allRows.forEach((row) => {
+      const d = row.timestamp.split('T')[0];
+      if (!byDate.has(d)) byDate.set(d, []);
+      byDate.get(d)!.push(row);
+    });
+
+    // 목표 날짜
+    const targetRows = byDate.get(targetDate) || [];
+    yearlyData.push(buildYearlyDayData(year, targetDate, targetRows));
+
+    // 인근 날짜 수집
+    byDate.forEach((rows, dateStr) => {
+      if (dateStr === targetDate) return;
+      const key = dateStr.slice(5); // MM-DD
+      if (!nearbyMap.has(key)) nearbyMap.set(key, []);
+      nearbyMap.get(key)!.push({ rows, year });
+    });
+  });
+
+  const validYears = yearlyData.filter((d) => d.hours.length > 0);
+  const totalYears = validYears.length;
+
+  // 빈 결과 처리
+  const emptyStats = {
+    weatherFrequency: { clear: 0, cloudy: 0, rain: 0, snow: 0 },
+    temperature: {
+      max: { highest: 0, lowest: 0, average: 0 },
+      min: { highest: 0, lowest: 0, average: 0 },
+      avg: { highest: 0, lowest: 0, average: 0 },
+    },
+    humidity: { highest: 0, lowest: 0, average: 0 },
+    precipitation: { highest: 0, average: 0 },
+    avgApparentTemp: 0,
+    avgWindSpeed: 0,
+    maxWindGust: 0,
+    rainProbability: 0,
+    snowProbability: 0,
+    clearProbability: 0,
+    trend: { recentAvgTemp: 0, olderAvgTemp: 0, diff: 0 },
+    hourlyAverages: [],
+  };
+
+  if (totalYears === 0) {
+    return {
+      city: city.name_en,
+      city_korean: city.name_ko,
+      country: city.country,
+      date: `${mm}-${dd}`,
+      cityLat: city.lat ?? undefined,
+      cityLon: city.lon ?? undefined,
+      statistics: emptyStats,
+      yearlyData,
+    };
+  }
+
+  // ─── 통계 계산 ────────────────────────────────────────────────────────────
+
+  const weatherFrequency = { clear: 0, cloudy: 0, rain: 0, snow: 0 };
+  validYears.forEach((d) => {
+    weatherFrequency[categorizeWeather(d.dominantWeatherCode)]++;
+  });
+
+  const allHours = validYears.flatMap((d) => d.hours);
+  const humidities = allHours.map((h) => h.humidity);
+
+  const rainDayCount = validYears.filter(
+    (d) => d.totalRain > 1 || d.totalPrecipitation > 1
+  ).length;
+  const snowDayCount = validYears.filter((d) => d.totalSnowfall > 0).length;
+
+  // 트렌드: 전반(2016-2020) vs 후반(2021-2025)
+  const mid = Math.floor(years.length / 2);
+  const olderValid = validYears.filter((d) => years.indexOf(d.year) < mid);
+  const recentValid = validYears.filter((d) => years.indexOf(d.year) >= mid);
+  const olderAvgTemp =
+    olderValid.length > 0
+      ? olderValid.reduce((s, d) => s + d.tempAvg, 0) / olderValid.length
+      : 0;
+  const recentAvgTemp =
+    recentValid.length > 0
+      ? recentValid.reduce((s, d) => s + d.tempAvg, 0) / recentValid.length
+      : 0;
+
+  // 시간대별 평균
+  const hourlyAverages: HourlyAverage[] = [];
+  for (let h = 0; h < 24; h++) {
+    const pts = validYears.flatMap((d) => d.hours.filter((p) => p.hour === h));
+    if (pts.length === 0) continue;
+    const avgTemp = pts.reduce((s, p) => s + p.temperature, 0) / pts.length;
+    const avgApparentTemp =
+      pts.reduce((s, p) => s + p.apparent_temp, 0) / pts.length;
+    const avgCloudCover =
+      pts.reduce((s, p) => s + p.cloud_cover, 0) / pts.length;
+    const avgPrecipitation =
+      pts.reduce((s, p) => s + p.precipitation, 0) / pts.length;
+    const dominantWeatherCode = getDominantCode(pts.map((p) => p.weather_code));
+    hourlyAverages.push({
+      hour: h,
+      avgTemp,
+      avgApparentTemp,
+      avgCloudCover,
+      dominantWeatherCode,
+      avgPrecipitation,
+      isBestHour: false,
+    });
+  }
+
+  // 베스트 시간대: 낮(8-17시) 중 구름 적고 기온 높은 구간
+  const daytimeHours = hourlyAverages.filter(
+    (h) => h.hour >= 8 && h.hour <= 17
+  );
+  if (daytimeHours.length > 0) {
+    const minCloud = Math.min(...daytimeHours.map((h) => h.avgCloudCover));
+    const maxTemp = Math.max(...daytimeHours.map((h) => h.avgTemp));
+    daytimeHours.forEach((h) => {
+      h.isBestHour =
+        h.avgCloudCover <= minCloud + 15 && h.avgTemp >= maxTemp - 3;
+    });
+  }
+
+  // ─── 인근 날짜 ────────────────────────────────────────────────────────────
+
+  const targetScore = (() => {
+    const ap = validYears.reduce((s, d) => s + d.avgApparentTemp, 0) / totalYears;
+    const tempGradeScore = ap >= 20 ? 25 : ap >= 12 ? 30 : ap >= 5 ? 20 : 0;
+    return (
+      tempGradeScore +
+      (weatherFrequency.clear / totalYears) * 100 * 0.3 -
+      ((rainDayCount / totalYears) * 100) * 0.5
+    );
+  })();
+
+  const nearbyDates: NearbyDateStats[] = [];
+  nearbyMap.forEach((yearEntries, key) => {
+    const [m, d] = key.split('-').map(Number);
+    if (yearEntries.length < 3) return; // 데이터 부족한 날짜 제외
+    const allRows = yearEntries.flatMap((e) => e.rows);
+    if (allRows.length === 0) return;
+
+    const temps = allRows.map((r) => r.temperature);
+    const avgTemp = temps.reduce((a, b) => a + b, 0) / temps.length;
+    const clearCount = yearEntries.filter(
+      ({ rows }) => categorizeWeather(getDominantCode(rows.map((r) => r.weather_code))) === 'clear'
+    ).length;
+    const rainCount = yearEntries.filter(
+      ({ rows }) => categorizeWeather(getDominantCode(rows.map((r) => r.weather_code))) === 'rain'
+    ).length;
+    const n = yearEntries.length;
+    const clearPct = (clearCount / n) * 100;
+    const rainPct = (rainCount / n) * 100;
+    const avgPrecipitation =
+      yearEntries.reduce(
+        (s, { rows }) => s + rows.reduce((rs, r) => rs + r.precipitation, 0),
+        0
+      ) / n;
+    const dominantWeatherCode = getDominantCode(allRows.map((r) => r.weather_code));
+
+    const ap = allRows.reduce((s, r) => s + r.apparent_temp, 0) / allRows.length;
+    const tempGradeScore = ap >= 20 ? 25 : ap >= 12 ? 30 : ap >= 5 ? 20 : 0;
+    const score = tempGradeScore + clearPct * 0.3 - rainPct * 0.5;
+
+    nearbyDates.push({
+      month: m,
+      day: d,
+      score,
+      avgTemp,
+      tempMax: Math.max(...temps),
+      tempMin: Math.min(...temps),
+      clearPct,
+      rainPct,
+      avgPrecipitation,
+      dominantWeatherCode,
+    });
+  });
+
+  // 목표 날짜보다 점수 높은 날짜만, 거리순 정렬 후 상위 3개
+  const targetMonthDay = new Date(2000, month - 1, day);
+  const betterDates = nearbyDates
+    .filter((d) => d.score > targetScore - 5)
+    .sort((a, b) => {
+      const da = Math.abs(new Date(2000, a.month - 1, a.day).getTime() - targetMonthDay.getTime());
+      const db = Math.abs(new Date(2000, b.month - 1, b.day).getTime() - targetMonthDay.getTime());
+      return da - db;
+    })
+    .slice(0, 5)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3);
+
+  return {
+    city: city.name_en,
+    city_korean: city.name_ko,
+    country: city.country,
+    date: `${mm}-${dd}`,
+    cityLat: city.lat ?? undefined,
+    cityLon: city.lon ?? undefined,
+    statistics: {
+      weatherFrequency,
+      temperature: {
+        max: calcTempStat(validYears.map((d) => d.tempMax)),
+        min: calcTempStat(validYears.map((d) => d.tempMin)),
+        avg: calcTempStat(validYears.map((d) => d.tempAvg)),
+      },
+      humidity: {
         highest: Math.max(...humidities),
         lowest: Math.min(...humidities),
         average: humidities.reduce((a, b) => a + b, 0) / humidities.length,
-      };
-      
-      // 강수량 통계 계산
-      const precipitations = dailyData.map((d) => d.precipitation_mm);
-      const precipitation = {
-        highest: Math.max(...precipitations),
-        average: precipitations.reduce((a, b) => a + b, 0) / precipitations.length,
-      };
-      
-      return {
-        city: weatherData.city,
-        city_korean: weatherData.city_korean,
-        country: weatherData.country,
-        date: targetDate,
-        statistics: {
-          weatherFrequency,
-          temperature,
-          humidity,
-          precipitation,
-        },
-        yearlyData: dailyData,
-      };
-    } catch (error) {
-      throw new Error(`Failed to fetch weather statistics: ${error}`);
-    }
-  } else {
-    // 프로덕션: API 호출
-    const response = await fetch(
-      `/api/weather/statistics?city=${city}&month=${month}&day=${day}`
-    );
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch weather statistics: ${response.statusText}`);
-    }
-    
-    return response.json();
-  }
+      },
+      precipitation: {
+        highest: Math.max(...validYears.map((d) => d.totalPrecipitation)),
+        average:
+          validYears.reduce((s, d) => s + d.totalPrecipitation, 0) / totalYears,
+      },
+      avgApparentTemp:
+        validYears.reduce((s, d) => s + d.avgApparentTemp, 0) / totalYears,
+      avgWindSpeed:
+        validYears.reduce((s, d) => s + d.avgWindSpeed, 0) / totalYears,
+      maxWindGust: Math.max(...validYears.map((d) => d.maxWindGust)),
+      rainProbability: (rainDayCount / totalYears) * 100,
+      snowProbability: (snowDayCount / totalYears) * 100,
+      clearProbability: (weatherFrequency.clear / totalYears) * 100,
+      trend: { recentAvgTemp, olderAvgTemp, diff: recentAvgTemp - olderAvgTemp },
+      hourlyAverages,
+    },
+    yearlyData,
+    nearbyDates: betterDates,
+  };
 };
 
 export const fetchCities = async (): Promise<City[]> => {
-  if (isDev) {
-    // 개발 환경: 실제 JSON 파일이 있는 도시만 불러오기
-    // public 폴더에 있는 모든 도시 목록 (datas/README.md 기준)
-    const allCityIds = [
-      // 한국 (12개)
-      'seoul', 'incheon', 'suwon', 'yongin', 'seongnam', 'goyang', 
-      'jeonju', 'cheongju', 'ulsan', 'geoje', 'tongyeong', 'gunsan',
-      'busan', 'daegu', 'daejeon', 'gwangju', 'jeju', 'seogwipo',
-      'jinju', 'changwon', 'gyeongju', 'pohang', 'gangneung', 'sokcho',
-      'chuncheon', 'wonju', 'sejong', 'yeosu', 'suncheon', 'mokpo',
-      
-      // 중국 (6개 + 추가)
-      'xian', 'guangzhou', 'shenzhen', 'macau', 'weihai', 'dalian',
-      'beijing', 'shanghai', 'hangzhou', 'suzhou', 'nanjing', 'qingdao',
-      'wuxi', 'guilin', 'yangshuo', 'lijiang', 'shangri-la', 'dunhuang',
-      'zhangjiajie', 'harbin',
-      
-      // 일본 (6개 + 추가)
-      'asahikawa', 'nagasaki', 'beppu', 'yufuin', 'ishigaki', 'okinawa-naha',
-      'tokyo', 'osaka', 'kyoto', 'fukuoka', 'sapporo', 'hakodate', 'otaru',
-      'nara', 'kobe', 'hiroshima', 'okayama', 'takamatsu', 'matsuyama',
-      'oita', 'kitakyushu', 'miyakojima',
-      
-      // 베트남 (1개 + 추가)
-      'phu-quoc', 'hanoi', 'halong-bay', 'sapa', 'hue', 'hoi-an', 
-      'da-nang', 'nha-trang', 'da-lat', 'mui-ne', 'ho-chi-minh',
-      
-      // 태국
-      'bangkok', 'pattaya', 'phuket', 'krabi', 'koh-samui', 'hua-hin',
-      'chiang-mai', 'chiang-rai',
-      
-      // 싱가포르/말레이시아
-      'singapore', 'kuala-lumpur', 'penang', 'langkawi', 'kota-kinabalu',
-      
-      // 인도네시아/필리핀
-      'bali', 'lombok', 'yogyakarta', 'jakarta',
-      'manila', 'cebu', 'boracay', 'bohol', 'clark', 'davao',
-      
-      // 대만/홍콩
-      'taipei', 'taichung', 'kaohsiung', 'jiufen', 'hualien',
-      'hong-kong',
-      
-      // 미국/괌/사이판
-      'new-york', 'los-angeles', 'san-francisco', 'san-diego', 
-      'seattle', 'las-vegas', 'guam', 'saipan', 'honolulu',
-      
-      // 유럽
-      'paris', 'london', 'amsterdam', 'berlin', 'munich', 'zurich', 
-      'interlaken', 'vienna', 'budapest', 'prague',
-      'barcelona', 'madrid', 'rome', 'florence', 'venice', 'milan',
-    ];
-    
-    const cities: City[] = [];
-    
-    // 병렬로 도시 데이터 로드 (최대 10개씩)
-    const batchSize = 10;
-    for (let i = 0; i < allCityIds.length; i += batchSize) {
-      const batch = allCityIds.slice(i, i + batchSize);
-      const promises = batch.map(async (cityId) => {
-        try {
-          const response = await fetch(`/${cityId}.json`);
-          if (response.ok) {
-            const data: WeatherData = await response.json();
-            return {
-              id: cityId,
-              name: data.city,
-              nameKo: data.city_korean || data.city,
-              country: data.country,
-              lat: data.lat || undefined,
-              lon: data.lon || undefined,
-            } as City;
-          }
-        } catch (error) {
-          // 파일이 없으면 무시
-        }
-        return null;
-      });
-      
-      const results = await Promise.all(promises);
-      cities.push(...results.filter((city): city is City => city !== null && city.id !== undefined));
-    }
-    
-    return cities.sort((a, b) => a.nameKo.localeCompare(b.nameKo, 'ko'));
-  } else {
-    // 프로덕션: API 호출
-    const response = await fetch(`/api/weather/cities`);
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch cities: ${response.statusText}`);
-    }
-    
-    const data = await response.json();
-    return data.cities;
-  }
+  const { data, error } = await supabase
+    .from('cities')
+    .select('id, name_en, name_ko, country, lat, lon')
+    .order('name_ko');
+
+  if (error || !data) return [];
+
+  return data.map((c) => ({
+    id: c.id,
+    name: c.name_en,
+    nameKo: c.name_ko,
+    country: c.country,
+    lat: c.lat ?? undefined,
+    lon: c.lon ?? undefined,
+  }));
 };
 
-export const submitContact = async (email: string, message: string): Promise<void> => {
+export const submitContact = async (
+  email: string,
+  message: string
+): Promise<void> => {
   const response = await fetch(`/api/contact`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, message }),
   });
-  
   if (!response.ok) {
     throw new Error(`Failed to submit contact: ${response.statusText}`);
   }

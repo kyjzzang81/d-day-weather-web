@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { City } from '../types/weather';
 import { fetchCities } from '../utils/weatherApi';
 
@@ -53,7 +54,7 @@ const CitySelector: React.FC<CitySelectorProps> = ({
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div className="dialog-overlay" onClick={onClose}>
       <div className="dialog-content max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-10 relative z-10">
@@ -152,7 +153,8 @@ const CitySelector: React.FC<CitySelectorProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

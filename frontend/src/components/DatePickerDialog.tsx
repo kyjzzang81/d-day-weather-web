@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 
@@ -26,7 +27,7 @@ const DatePickerDialog: React.FC<DatePickerDialogProps> = ({
     onClose();
   };
 
-  return (
+  return createPortal(
     <div className="dialog-overlay" onClick={onClose}>
       <div className="dialog-content" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-10 relative z-10">
@@ -65,7 +66,8 @@ const DatePickerDialog: React.FC<DatePickerDialogProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

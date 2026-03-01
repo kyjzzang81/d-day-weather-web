@@ -1,352 +1,576 @@
-import React from 'react';
-import { WeatherStatistics } from '../types/weather';
+import React, { useState, useRef } from 'react';
+import { WeatherStatistics, HourlyAverage } from '../types/weather';
+import {
+  analyzeWeather,
+  WeatherAnalysis,
+  ActivityItem,
+  AvoidItem,
+  PackingItem,
+  NearbyRec,
+} from '../utils/weatherRules';
 
-interface WeatherStatsProps {
-  statistics: WeatherStatistics;
+// ─── 날씨 이모지 ──────────────────────────────────────────────────────────────
+function weatherEmoji(code: number): string {
+  if (code === 0) return '☀️';
+  if (code === 1) return '🌤️';
+  if (code === 2) return '⛅';
+  if (code === 3) return '☁️';
+  if (code === 45 || code === 48) return '🌫️';
+  if ((code >= 71 && code <= 77) || code === 85 || code === 86) return '❄️';
+  if (code >= 80 && code <= 82) return '🌦️';
+  if (code >= 51 && code <= 67) return '🌧️';
+  if (code >= 95) return '⛈️';
+  return '🌤️';
 }
 
-const WeatherStats: React.FC<WeatherStatsProps> = ({ statistics }) => {
-  const { temperature, humidity, precipitation } = statistics.statistics;
-  
-  // 날씨 레이블에서 아이콘 가져오기
-  const getWeatherIcon = (label: string): string => {
-    if (label.includes('맑음')) return '☀️';
-    if (label.includes('흐림')) return '☁️';
-    if (label.includes('구름')) return '⛅';
-    if (label.includes('비') || label.includes('이슬비') || label.includes('소나기')) return '🌧️';
-    if (label.includes('눈') || label.includes('진눈깨비')) return '❄️';
-    if (label.includes('안개')) return '🌫️';
-    if (label.includes('뇌우')) return '⛈️';
-    return '🌤️';
-  };
+// ─── 마크다운 bold 처리 ───────────────────────────────────────────────────────
+function BoldText({ text }: { text: string }) {
+  const parts = text.split(/\*\*(.+?)\*\*/g);
+  return (
+    <>
+      {parts.map((p, i) =>
+        i % 2 === 1 ? <strong key={i} className="text-ink font-semibold">{p}</strong> : p
+      )}
+    </>
+  );
+}
 
-  // 10년간 데이터 전체 (연도별로 정렬)
-  const allYearlyData = statistics.yearlyData.sort((a, b) => a.date.localeCompare(b.date));
-  
-  // 날짜 포맷 변환 (MM-DD -> M월 D일)
-  const formatDateString = (dateStr: string) => {
-    const [month, day] = dateStr.split('-').map(num => parseInt(num, 10));
-    return `${month}월 ${day}일`;
-  };
-  
-  // 강수량 설명
-  const getRainDescription = (mm: number): string => {
-    if (mm === 0) return '비가 오지 않았습니다';
-    if (mm < 1) return '이슬비 수준의 아주 약한 비';
-    if (mm < 5) return '가벼운 비 (우산 필요)';
-    if (mm < 15) return '보통 강도의 비';
-    if (mm < 30) return '제법 많은 비';
-    if (mm < 50) return '상당히 많은 비 (외출 주의)';
-    if (mm < 80) return '매우 많은 비 (폭우 수준)';
-    return '집중호우 수준의 폭우';
-  };
+// ─── 섹션 레이블 ──────────────────────────────────────────────────────────────
+const SecLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <div className="sec-label">{children}</div>
+);
+
+// ─── 요약 카드 ────────────────────────────────────────────────────────────────
+const SummaryCard: React.FC<{ text: string }> = ({ text }) => (
+  <div className="summary-card">
+    <BoldText text={text} />
+  </div>
+);
+
+// ─── 여행 적합도 카드 ─────────────────────────────────────────────────────────
+const VerdictCard: React.FC<{ verdict: WeatherAnalysis['verdict'] }> = ({ verdict }) => (
+  <div className="verdict-card">
+    <div className="verdict-top">
+      <span className="text-xl">✈️</span>
+      <div className="verdict-badge">{verdict.label}</div>
+    </div>
+    <div className="verdict-title">{verdict.title}</div>
+    <div className="verdict-desc">
+      <BoldText text={verdict.desc} />
+    </div>
+  </div>
+);
+
+// ─── 기온 범위 카드 ───────────────────────────────────────────────────────────
+const TempRangeCard: React.FC<{ statistics: WeatherStatistics['statistics'] }> = ({
+  statistics,
+}) => {
+  const { temperature } = statistics;
+  const avg = Math.round(temperature.avg.average);
+  const min = Math.round(temperature.min.lowest);
+  const max = Math.round(temperature.max.highest);
+  const avgMax = Math.round(temperature.max.average);
+  const avgMin = Math.round(temperature.min.average);
+
+  // 바 차트 계산: min to max 기준으로 range/fill 위치 계산
+  const range = max - min || 1;
+  const rangeLeft = ((avgMin - min) / range) * 100;
+  const rangeWidth = ((avgMax - avgMin) / range) * 100;
+  const fillLeft = ((avg - min) / range) * 100;
+  const trendDiff = statistics.trend.diff;
 
   return (
-    <div className="space-y-10">
-      {/* AI 총평 */}
-      <div className="card">
-        <div className="flex items-start gap-3 md:gap-4">
-          <div className="text-3xl md:text-4xl animate-float flex-shrink-0">🤖</div>
-          <div className="flex-1">
-            <h3 className="text-lg md:text-xl font-bold mb-3 md:mb-4 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-              AI 날씨 분석
-            </h3>
-            <div className="text-sm md:text-base text-gray-700 leading-relaxed space-y-3">
-              {(() => {
-                const { weatherFrequency, temperature, precipitation } = statistics.statistics;
-                const totalDays = statistics.yearlyData.length;
-                const clearRate = (weatherFrequency.clear / totalDays) * 100;
-                const rainRate = (weatherFrequency.rain / totalDays) * 100;
-                const avgTemp = temperature.avg.average;
-                const tempRange = temperature.max.highest - temperature.min.lowest;
-                
-                // 여행 추천도 계산
-                const isGoodForTravel = clearRate > 40 || (clearRate + weatherFrequency.cloudy / totalDays * 100 > 60 && rainRate < 30);
-                
-                return (
-                  <>
-                    <p>
-                      {isGoodForTravel ? (
-                        <span className="text-green-700 font-semibold">✅ {formatDateString(statistics.date)}은 여행하기 좋은 날입니다!</span>
-                      ) : (
-                        <span className="text-orange-700 font-semibold">⚠️ {formatDateString(statistics.date)}은 날씨 변동이 있을 수 있는 날입니다.</span>
-                      )}
-                      {' '}10년간 데이터를 보면 맑은 날이 <strong>{clearRate.toFixed(0)}%</strong>, 
-                      비 오는 날이 <strong>{rainRate.toFixed(0)}%</strong> 확률로 나타났습니다.
-                    </p>
-                    
-                    <p>
-                      🌡️ 기온은 평균 <strong className="text-indigo-600">{avgTemp.toFixed(1)}°C</strong>로 
-                      {avgTemp > 25 ? '더운 날씨' : avgTemp > 20 ? '따뜻하고 쾌적한 날씨' : 
-                       avgTemp > 15 ? '선선한 날씨' : avgTemp > 5 ? '쌀쌀한 날씨' : '추운 날씨'}입니다. 
-                      {tempRange > 15 ? (
-                        <span className="text-orange-600"> 일교차가 {tempRange.toFixed(1)}°C로 크니 <strong>겉옷을 꼭 챙기세요.</strong></span>
-                      ) : (
-                        <span> 일교차는 {tempRange.toFixed(1)}°C로 안정적입니다.</span>
-                      )}
-                    </p>
-                    
-                    {precipitation.highest > 0 ? (
-                      <p>
-                        ☔ 강수량은 평균 <strong>{precipitation.average.toFixed(1)}mm</strong>이며, 
-                        최악의 경우 <strong>{precipitation.highest.toFixed(1)}mm</strong>의 비가 내릴 수 있습니다 
-                        ({getRainDescription(precipitation.highest)}). 
-                        {rainRate > 50 ? ' 우산은 필수입니다!' : 
-                         rainRate > 30 ? ' 우산을 챙기는 것을 추천합니다.' : 
-                         ' 접이식 우산 정도면 충분합니다.'}
-                      </p>
-                    ) : (
-                      <p className="text-green-700">
-                        ☀️ 강수량이 거의 없어 쾌적한 여행이 가능합니다!
-                      </p>
-                    )}
-                  </>
-                );
-              })()}
-            </div>
+    <div className="card mb-3">
+      <div className="temp-top">
+        <div>
+          <div className="temp-avg">
+            {avg}<sup>°</sup>
           </div>
+          <div className="temp-sub">평균 기온</div>
+        </div>
+        {Math.abs(trendDiff) >= 0.5 && (
+          <div className="temp-badge">
+            {trendDiff > 0 ? '📈' : '📉'} 요즘 {Math.abs(trendDiff).toFixed(1)}° {trendDiff > 0 ? '더 따뜻' : '더 추운'} 편
+          </div>
+        )}
+      </div>
+      <div className="bar-wrap">
+        <div className="bar-bg" />
+        <div
+          className="bar-range"
+          style={{ left: `${Math.max(0, rangeLeft)}%`, width: `${Math.min(100 - rangeLeft, rangeWidth)}%` }}
+        />
+        <div
+          className="bar-fill"
+          style={{ left: `${Math.max(0, fillLeft - 10)}%`, width: '20%' }}
+        />
+        <div
+          className="bar-thumb"
+          style={{ left: `${Math.min(90, Math.max(5, fillLeft))}%` }}
+        />
+      </div>
+      <div className="bar-labels">
+        <div>
+          {min}°<br /><span style={{ fontSize: 10 }}>추운 해</span>
+        </div>
+        <div className="bar-mid">
+          {avg}°<br /><span style={{ fontSize: 10, fontWeight: 400, color: 'var(--ink3)' }}>평균</span>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          {max}°<br /><span style={{ fontSize: 10 }}>따뜻한 해</span>
         </div>
       </div>
-
-      {/* 10년간 시간대별 날씨 상세 */}
-      {allYearlyData.length > 0 && (
-        <div className="card">
-          <h3 className="text-xl md:text-2xl font-bold mb-6 md:mb-8 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-            10년간 {formatDateString(statistics.date)} 날씨
-          </h3>
-          <div className="space-y-3 md:space-y-4 relative z-10">
-            {allYearlyData.map((day) => {
-              const year = day.date.substring(0, 4);
-              const hasDetail = !!day.weather_detail;
-              
-              return (
-                <div 
-                  key={day.date}
-                  className="p-4 md:p-5 rounded-2xl md:rounded-3xl bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-indigo-200/50 hover:scale-[1.01] md:hover:scale-[1.02] transition-transform duration-300"
-                >
-                  {/* 모바일: 세로 배치, 데스크톱: 가로 배치 */}
-                  <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-6">
-                    {/* 연도 */}
-                    <div className="flex-shrink-0 md:w-20">
-                      <div className="text-lg md:text-xl font-bold text-gray-900">{year}년</div>
-                    </div>
-                    
-                    {/* 시간대별 날씨 또는 기본 날씨 */}
-                    {hasDetail ? (
-                      <>
-                        {/* 모바일: 2x2 그리드, 데스크톱: 1x4 그리드 */}
-                        <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
-                          <div className="text-center p-2 md:p-3 bg-white/70 rounded-xl md:rounded-2xl">
-                            <div className="text-[10px] md:text-xs text-gray-600 mb-1">🌙 새벽</div>
-                            <div className="text-xl md:text-2xl mb-1 animate-float">{getWeatherIcon(day.weather_detail!.period_summary.dawn)}</div>
-                            <div className="text-xs md:text-sm font-semibold">{day.weather_detail!.period_summary.dawn}</div>
-                          </div>
-                          <div className="text-center p-2 md:p-3 bg-white/70 rounded-xl md:rounded-2xl">
-                            <div className="text-[10px] md:text-xs text-gray-600 mb-1">🌅 오전</div>
-                            <div className="text-xl md:text-2xl mb-1 animate-float" style={{animationDelay: '0.2s'}}>{getWeatherIcon(day.weather_detail!.period_summary.morning)}</div>
-                            <div className="text-xs md:text-sm font-semibold">{day.weather_detail!.period_summary.morning}</div>
-                          </div>
-                          <div className="text-center p-2 md:p-3 bg-white/70 rounded-xl md:rounded-2xl">
-                            <div className="text-[10px] md:text-xs text-gray-600 mb-1">☀️ 오후</div>
-                            <div className="text-xl md:text-2xl mb-1 animate-float" style={{animationDelay: '0.4s'}}>{getWeatherIcon(day.weather_detail!.period_summary.afternoon)}</div>
-                            <div className="text-xs md:text-sm font-semibold">{day.weather_detail!.period_summary.afternoon}</div>
-                          </div>
-                          <div className="text-center p-2 md:p-3 bg-white/70 rounded-xl md:rounded-2xl">
-                            <div className="text-[10px] md:text-xs text-gray-600 mb-1">🌆 저녁</div>
-                            <div className="text-xl md:text-2xl mb-1 animate-float" style={{animationDelay: '0.6s'}}>{getWeatherIcon(day.weather_detail!.period_summary.evening)}</div>
-                            <div className="text-xs md:text-sm font-semibold">{day.weather_detail!.period_summary.evening}</div>
-                          </div>
-                        </div>
-                        
-                        {/* 요약 및 기온 */}
-                        <div className="flex-shrink-0 text-center md:text-right w-full md:w-auto md:min-w-[200px] mt-3 md:mt-0">
-                          <div className="text-xs text-indigo-600 font-medium mb-1">{day.weather_detail!.summary}</div>
-                          <div className="flex items-center justify-center md:justify-end gap-2 text-xs flex-wrap">
-                            <span className="text-red-600 font-semibold">최고 {day.temp.max.toFixed(1)}°</span>
-                            <span className="text-gray-400">/</span>
-                            <span className="text-blue-600 font-semibold">최저 {day.temp.min.toFixed(1)}°</span>
-                          </div>
-                          {/* 비 정보 */}
-                          {day.weather_detail!.rain_info && (
-                            <div className="text-xs text-blue-700 mt-1">
-                              ☔ {day.weather_detail!.rain_info.start_hour}~{day.weather_detail!.rain_info.end_hour}시 ({day.weather_detail!.rain_info.hours}h)
-                            </div>
-                          )}
-                          {/* 강수량 */}
-                          {day.precipitation_mm > 0 && (
-                            <div className="text-xs text-blue-600 mt-1">
-                              💧 {day.precipitation_mm.toFixed(1)}mm
-                              <span className="text-gray-500 ml-1">({getRainDescription(day.precipitation_mm)})</span>
-                            </div>
-                          )}
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        {/* weather_detail이 없는 경우 4단계로 동일한 날씨 표시 */}
-                        <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
-                          <div className="text-center p-2 md:p-3 bg-white/70 rounded-xl md:rounded-2xl">
-                            <div className="text-[10px] md:text-xs text-gray-600 mb-1">🌙 새벽</div>
-                            <div className="text-xl md:text-2xl mb-1 animate-float">{getWeatherIcon(day.weather.label)}</div>
-                            <div className="text-xs md:text-sm font-semibold">{day.weather.label}</div>
-                          </div>
-                          <div className="text-center p-2 md:p-3 bg-white/70 rounded-xl md:rounded-2xl">
-                            <div className="text-[10px] md:text-xs text-gray-600 mb-1">🌅 오전</div>
-                            <div className="text-xl md:text-2xl mb-1 animate-float" style={{animationDelay: '0.2s'}}>{getWeatherIcon(day.weather.label)}</div>
-                            <div className="text-xs md:text-sm font-semibold">{day.weather.label}</div>
-                          </div>
-                          <div className="text-center p-2 md:p-3 bg-white/70 rounded-xl md:rounded-2xl">
-                            <div className="text-[10px] md:text-xs text-gray-600 mb-1">☀️ 오후</div>
-                            <div className="text-xl md:text-2xl mb-1 animate-float" style={{animationDelay: '0.4s'}}>{getWeatherIcon(day.weather.label)}</div>
-                            <div className="text-xs md:text-sm font-semibold">{day.weather.label}</div>
-                          </div>
-                          <div className="text-center p-2 md:p-3 bg-white/70 rounded-xl md:rounded-2xl">
-                            <div className="text-[10px] md:text-xs text-gray-600 mb-1">🌆 저녁</div>
-                            <div className="text-xl md:text-2xl mb-1 animate-float" style={{animationDelay: '0.6s'}}>{getWeatherIcon(day.weather.label)}</div>
-                            <div className="text-xs md:text-sm font-semibold">{day.weather.label}</div>
-                          </div>
-                        </div>
-                        
-                        {/* 기본 기온 정보 */}
-                        <div className="flex-shrink-0 text-center md:text-right w-full md:w-auto md:min-w-[200px] mt-3 md:mt-0">
-                          <div className="text-xs text-gray-600 mb-2">하루 종일 {day.weather.label}</div>
-                          <div className="flex items-center justify-center md:justify-end gap-2 text-xs flex-wrap">
-                            <span className="text-red-600 font-semibold">최고 {day.temp.max.toFixed(1)}°</span>
-                            <span className="text-gray-400">/</span>
-                            <span className="text-blue-600 font-semibold">최저 {day.temp.min.toFixed(1)}°</span>
-                          </div>
-                          {/* 강수량 */}
-                          {day.precipitation_mm > 0 && (
-                            <div className="text-xs text-blue-600 mt-1">
-                              💧 {day.precipitation_mm.toFixed(1)}mm
-                              <span className="text-gray-500 ml-1">({getRainDescription(day.precipitation_mm)})</span>
-                            </div>
-                          )}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* 기온 통계 */}
-      <div className="card">
-        <h3 className="text-xl md:text-2xl font-bold mb-6 md:mb-8 bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 bg-clip-text text-transparent">
-          기온 통계 (°C)
-        </h3>
-        <div className="space-y-6 md:space-y-8 relative z-10">
-          <StatRow
-            label="최고 기온"
-            highest={temperature.max.highest}
-            lowest={temperature.max.lowest}
-            average={temperature.max.average}
-            emoji="🌡️"
-          />
-          <StatRow
-            label="최저 기온"
-            highest={temperature.min.highest}
-            lowest={temperature.min.lowest}
-            average={temperature.min.average}
-            emoji="🥶"
-          />
-          <StatRow
-            label="평균 기온"
-            highest={temperature.avg.highest}
-            lowest={temperature.avg.lowest}
-            average={temperature.avg.average}
-            emoji="🌤️"
-          />
-        </div>
-      </div>
-
-      {/* 습도 통계 */}
-      <div className="card">
-        <h3 className="text-xl md:text-2xl font-bold mb-6 md:mb-8 bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent">
-          습도 통계 (%)
-        </h3>
-        <div className="relative z-10">
-          <StatRow
-            label="평균 습도"
-            highest={humidity.highest}
-            lowest={humidity.lowest}
-            average={humidity.average}
-            emoji="💧"
-          />
-        </div>
-      </div>
-
-      {/* 강수량 통계 */}
-      <div className="card">
-        <h3 className="text-xl md:text-2xl font-bold mb-6 md:mb-8 bg-gradient-to-r from-indigo-500 via-blue-500 to-cyan-500 bg-clip-text text-transparent">
-          강수량 통계
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 relative z-10">
-          <div className="text-center p-5 md:p-6 rounded-2xl md:rounded-3xl bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-200/50 hover:scale-105 transition-transform duration-300">
-            <div className="text-xs md:text-sm font-semibold text-blue-600 mb-2 md:mb-3 uppercase tracking-wide">최대 강수량</div>
-            <div className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent mb-2">
-              {precipitation.highest.toFixed(1)}
-              <span className="text-xl md:text-2xl ml-1">mm</span>
-            </div>
-            <div className="text-xs md:text-sm text-blue-700 font-medium">
-              {getRainDescription(precipitation.highest)}
-            </div>
-          </div>
-          <div className="text-center p-5 md:p-6 rounded-2xl md:rounded-3xl bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-indigo-200/50 hover:scale-105 transition-transform duration-300">
-            <div className="text-xs md:text-sm font-semibold text-indigo-600 mb-2 md:mb-3 uppercase tracking-wide">평균 강수량</div>
-            <div className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-2">
-              {precipitation.average.toFixed(1)}
-              <span className="text-xl md:text-2xl ml-1">mm</span>
-            </div>
-            <div className="text-xs md:text-sm text-indigo-700 font-medium">
-              {getRainDescription(precipitation.average)}
-            </div>
-          </div>
-        </div>
+      <div style={{ marginTop: 10, display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--ink3)' }}>
+        <span>최저 평균 {avgMin}°</span>
+        <span>최고 평균 {avgMax}°</span>
       </div>
     </div>
   );
 };
 
-interface StatRowProps {
-  label: string;
-  highest: number;
-  lowest: number;
-  average: number;
-  emoji: string;
-}
+// ─── 강수 카드 ────────────────────────────────────────────────────────────────
+const PrecipCard: React.FC<{
+  statistics: WeatherStatistics['statistics'];
+  analysis: WeatherAnalysis;
+}> = ({ statistics, analysis }) => {
+  const rainPct = Math.round(statistics.rainProbability);
+  const snowPct = Math.round(statistics.snowProbability);
+  const freq =
+    rainPct < 20 ? '5번 중 1번꼴' :
+    rainPct < 30 ? '4번 중 1번꼴' :
+    rainPct < 40 ? '3번 중 1번꼴' :
+    rainPct < 60 ? '2번 중 1번꼴' : '2번 중 1번 이상';
+  const noteMsg =
+    analysis.rainGrade === 'NO_RAIN' ? '비 걱정 없이 야외 일정을 즐길 수 있어요.' :
+    analysis.rainGrade === 'LOW_RAIN' ? '☂️ 내리더라도 많지 않아요. 접이식 우산이면 충분해요.' :
+    analysis.rainGrade === 'MID_RAIN' ? '☔ 비가 올 수 있어요. 우산을 꼭 챙기세요.' :
+    '🌧️ 비가 올 가능성이 높아요. 우산은 필수예요.';
 
-const StatRow: React.FC<StatRowProps> = ({ label, highest, lowest, average, emoji }) => {
   return (
-    <div className="border-b-2 border-gradient-to-r from-purple-200 to-pink-200 last:border-0 pb-6 md:pb-8 last:pb-0">
-      <div className="flex items-center mb-4 md:mb-6">
-        <span className="text-2xl md:text-3xl mr-3 md:mr-4">{emoji}</span>
-        <span className="font-bold text-gray-900 text-base md:text-lg">{label}</span>
+    <>
+      <div className="rain-row">
+        <div className="rain-card">
+          <div className="rain-icon">🌧️</div>
+          <div className="rain-pct" style={{ color: 'var(--blue-mid)' }}>{rainPct}%</div>
+          <div className="rain-name">비 올 확률</div>
+          <div className="rain-freq">{freq}</div>
+        </div>
+        {snowPct > 0 && (
+          <div className="rain-card">
+            <div className="rain-icon">❄️</div>
+            <div className="rain-pct" style={{ color: 'var(--ink3)' }}>{snowPct}%</div>
+            <div className="rain-name">눈 올 확률</div>
+            <div className="rain-freq">{snowPct < 10 ? '드물게 있음' : '종종 있음'}</div>
+          </div>
+        )}
       </div>
-      <div className="grid grid-cols-3 gap-3 md:gap-8">
-        <div className="text-center p-3 md:p-5 rounded-2xl md:rounded-3xl bg-gradient-to-br from-red-50 to-orange-50 border-2 border-red-200/50 hover:scale-105 transition-transform duration-300">
-          <div className="text-[10px] md:text-xs font-bold text-red-600 mb-1 md:mb-2 uppercase tracking-wider">최고</div>
-          <div className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-red-600 to-orange-600 bg-clip-text text-transparent">
-            {highest.toFixed(1)}°
-          </div>
+      <div className="rain-note">{noteMsg}</div>
+    </>
+  );
+};
+
+// ─── 타임라인 카드 ────────────────────────────────────────────────────────────
+const TimelineCard: React.FC<{
+  hourlyAverages: HourlyAverage[];
+  bestTimeText: string;
+}> = ({ hourlyAverages, bestTimeText }) => {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  return (
+    <div className="card">
+      <div className="tl-scroll" ref={scrollRef}>
+        <div className="tl-inner">
+          {hourlyAverages
+            .filter((h) => h.hour % 2 === 0)
+            .map((h) => (
+              <div key={h.hour} className="tl-col">
+                <div className="tl-time">{h.hour}시</div>
+                <div
+                  className={`tl-box ${
+                    h.isBestHour ? 'best' : h.hour >= 6 && h.hour < 19 ? 'on' : 'off'
+                  }`}
+                >
+                  {weatherEmoji(h.dominantWeatherCode)}
+                  {h.isBestHour && <div className="tl-dot" />}
+                </div>
+                <div className="tl-temp">{Math.round(h.avgTemp)}°</div>
+              </div>
+            ))}
         </div>
-        <div className="text-center p-3 md:p-5 rounded-2xl md:rounded-3xl bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200/50 hover:scale-105 transition-transform duration-300">
-          <div className="text-[10px] md:text-xs font-bold text-purple-600 mb-1 md:mb-2 uppercase tracking-wider">평균</div>
-          <div className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-            {average.toFixed(1)}°
+      </div>
+      {bestTimeText && <div className="tl-note">✦ {bestTimeText}</div>}
+    </div>
+  );
+};
+
+// ─── 인근 날짜 ────────────────────────────────────────────────────────────────
+const NearbyDatesCard: React.FC<{ recs: NearbyRec[] }> = ({ recs }) => {
+  if (recs.length === 0) return null;
+  const DAYS = ['일', '월', '화', '수', '목', '금', '토'];
+
+  return (
+    <div className="alt-list">
+      {recs.map((r) => {
+        const dt = new Date(2026, r.month - 1, r.day);
+        const dayStr = DAYS[dt.getDay()];
+        return (
+          <div key={`${r.month}-${r.day}`} className="alt-item">
+            <div className="alt-icon">{r.icon}</div>
+            <div className="alt-info">
+              <div className="alt-date">
+                {r.month}월 {r.day}일 · {dayStr}요일
+              </div>
+              <div className="alt-name">{r.compareSummary}</div>
+              <div className="alt-desc">
+                맑음 {Math.round(r.clearPct)}% · 강수 {Math.round(r.rainPct)}%
+              </div>
+            </div>
+            <div className="alt-right">
+              <div className="alt-hi">{Math.round(r.tempMax)}°</div>
+              <div className="alt-lo">{Math.round(r.tempMin)}°</div>
+              <div className={`alt-tag ${r.tagColor}`}>{r.tagLabel}</div>
+            </div>
           </div>
+        );
+      })}
+    </div>
+  );
+};
+
+// ─── 활동 가이드 ──────────────────────────────────────────────────────────────
+const ActivitiesGuide: React.FC<{
+  activities: ActivityItem[];
+  avoidItems: AvoidItem[];
+}> = ({ activities, avoidItems }) => {
+  const [tab, setTab] = useState<'good' | 'bad'>('good');
+  return (
+    <>
+      <div className="toggle-row">
+        <button
+          className={`toggle-btn ${tab === 'good' ? 'a-good' : ''}`}
+          onClick={() => setTab('good')}
+        >
+          ✅ 하기 좋은 것
+        </button>
+        <button
+          className={`toggle-btn ${tab === 'bad' ? 'a-bad' : ''}`}
+          onClick={() => setTab('bad')}
+        >
+          🚫 피하면 좋은 것
+        </button>
+      </div>
+
+      {tab === 'good' ? (
+        <div className="panel on">
+          {activities.map((a, i) => (
+            <div key={i} className="act-item">
+              <div className="act-icon">{a.icon}</div>
+              <div style={{ flex: 1 }}>
+                <div className="act-name">{a.name}</div>
+                <div className="act-why">{a.reason}</div>
+              </div>
+              <div className={`act-tag ${a.isBest ? 'best' : ''}`}>{a.tag}</div>
+            </div>
+          ))}
         </div>
-        <div className="text-center p-3 md:p-5 rounded-2xl md:rounded-3xl bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-200/50 hover:scale-105 transition-transform duration-300">
-          <div className="text-[10px] md:text-xs font-bold text-blue-600 mb-1 md:mb-2 uppercase tracking-wider">최저</div>
-          <div className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
-            {lowest.toFixed(1)}°
-          </div>
+      ) : (
+        <div className="panel on">
+          {avoidItems.length === 0 ? (
+            <div className="act-item">
+              <div style={{ flex: 1, textAlign: 'center', color: 'var(--ink3)', fontSize: 13 }}>
+                🎉 특별히 피할 것이 없는 좋은 날이에요!
+              </div>
+            </div>
+          ) : (
+            avoidItems.map((a, i) => (
+              <div key={i} className="avd-item">
+                <div className="avd-icon">{a.icon}</div>
+                <div>
+                  <div className="avd-name">{a.name}</div>
+                  <div className="avd-why">{a.reason}</div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
+      )}
+    </>
+  );
+};
+
+// ─── 트렌드 카드 ──────────────────────────────────────────────────────────────
+const TrendCard: React.FC<{ text: string }> = ({ text }) => {
+  if (!text) return null;
+  return (
+    <div className="trend">
+      <div className="trend-icon">📈</div>
+      <div className="trend-text">
+        <BoldText text={text} />
       </div>
     </div>
+  );
+};
+
+// ─── 연도별 카드 (compact) ────────────────────────────────────────────────────
+const TIME_SLOTS = [
+  { hour: 0, label: '자정', night: true },
+  { hour: 4, label: '새벽', night: true },
+  { hour: 8, label: '오전', night: false },
+  { hour: 12, label: '낮', night: false },
+  { hour: 16, label: '오후', night: false },
+  { hour: 20, label: '저녁', night: false },
+];
+
+function getNearestHour(hours: WeatherStatistics['yearlyData'][0]['hours'], target: number) {
+  if (hours.length === 0) return null;
+  return hours.reduce((best, h) =>
+    Math.abs(h.hour - target) < Math.abs(best.hour - target) ? h : best
+  );
+}
+
+const SLOT_STYLE: Record<string, { bg: string; border: string; text: string }> = {
+  clear:  { bg: 'bg-amber-50',  border: 'border-amber-200/60',  text: 'text-amber-700'  },
+  cloudy: { bg: 'bg-slate-50',  border: 'border-slate-200/60',  text: 'text-slate-600'  },
+  rain:   { bg: 'bg-sky-50',    border: 'border-sky-200/60',    text: 'text-sky-700'    },
+  snow:   { bg: 'bg-violet-50', border: 'border-violet-200/60', text: 'text-violet-700' },
+  fog:    { bg: 'bg-gray-50',   border: 'border-gray-200/60',   text: 'text-gray-500'   },
+  storm:  { bg: 'bg-indigo-50', border: 'border-indigo-200/60', text: 'text-indigo-700' },
+};
+const NIGHT_STYLE = { bg: 'bg-slate-100', border: 'border-slate-200/60', text: 'text-slate-500' };
+
+function categorize(code: number): string {
+  if (code <= 1) return 'clear';
+  if (code <= 3) return 'cloudy';
+  if (code === 45 || code === 48) return 'fog';
+  if ((code >= 71 && code <= 77) || code === 85 || code === 86) return 'snow';
+  if (code === 95 || code === 96 || code === 99) return 'storm';
+  if (code >= 51) return 'rain';
+  return 'cloudy';
+}
+
+function weatherLabel(code: number): string {
+  if (code === 0) return '맑음';
+  if (code === 1) return '주로 맑음';
+  if (code === 2) return '구름 조금';
+  if (code === 3) return '흐림';
+  if (code === 45 || code === 48) return '안개';
+  if (code >= 51 && code <= 55) return '이슬비';
+  if (code >= 61 && code <= 65) return '비';
+  if (code >= 71 && code <= 73) return '눈';
+  if (code >= 80 && code <= 82) return '소나기';
+  if (code === 95) return '뇌우';
+  return '—';
+}
+
+const YearCard: React.FC<{ dayData: WeatherStatistics['yearlyData'][0] }> = ({ dayData }) => {
+  const noData = dayData.hours.length === 0;
+  const dayHours = dayData.hours.filter((h) => h.hour >= 6 && h.hour < 19);
+  const dominantCode = (() => {
+    const src = dayHours.length > 0 ? dayHours : dayData.hours;
+    if (src.length === 0) return 0;
+    const cnt: Record<number, number> = {};
+    src.forEach((h) => { cnt[h.weather_code] = (cnt[h.weather_code] ?? 0) + 1; });
+    return Number(Object.entries(cnt).sort((a, b) => b[1] - a[1])[0][0]);
+  })();
+
+  return (
+    <div
+      className="bg-white rounded-2xl border border-gray-100 overflow-hidden"
+      style={{ boxShadow: '0 2px 12px rgba(42,92,230,0.06)' }}
+    >
+      <div className="flex items-center justify-between px-4 pt-3 pb-2">
+        <div className="flex items-center gap-2">
+          <span className="text-base font-bold text-gray-800">{dayData.year}</span>
+          {!noData && (
+            <span className="text-xs text-gray-400">
+              {weatherEmoji(dominantCode)} {weatherLabel(dominantCode)}
+            </span>
+          )}
+        </div>
+        {!noData && (
+          <div className="flex items-center gap-1 text-xs font-semibold">
+            <span className="text-sky-500">{dayData.tempMin.toFixed(0)}°</span>
+            <span className="text-gray-300">/</span>
+            <span className="text-rose-500">{dayData.tempMax.toFixed(0)}°</span>
+            {dayData.totalPrecipitation > 0.1 && (
+              <span className="ml-1 text-sky-400 font-medium">
+                💧{dayData.totalPrecipitation.toFixed(1)}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+      <div className="grid grid-cols-6 gap-1.5 px-3 pb-3">
+        {TIME_SLOTS.map(({ hour, label, night }) => {
+          const data = noData ? null : getNearestHour(dayData.hours, hour);
+          const cat = data ? categorize(data.weather_code) : 'cloudy';
+          const style = night ? NIGHT_STYLE : (SLOT_STYLE[cat] ?? SLOT_STYLE.cloudy);
+          return (
+            <div
+              key={hour}
+              className={`flex flex-col items-center py-2 px-0.5 rounded-xl border ${style.bg} ${style.border} text-center`}
+            >
+              <span className="text-[9px] font-medium text-gray-400 mb-1 leading-none">{label}</span>
+              <span className="text-xl leading-none mb-1">
+                {data ? weatherEmoji(data.weather_code) : '—'}
+              </span>
+              <span className={`text-[10px] font-bold leading-none ${data ? style.text : 'text-gray-300'}`}>
+                {data ? `${data.temperature.toFixed(0)}°` : '—'}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// ─── 준비물 다이얼로그 ────────────────────────────────────────────────────────
+const PackingDialog: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  items: PackingItem[];
+  cityKorean: string;
+  date: string;
+}> = ({ isOpen, onClose, items, cityKorean, date }) => {
+  const [m, d] = date.split('-');
+  if (!isOpen) return null;
+
+  return (
+    <div
+      className="overlay open"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="dialog">
+        <div className="dlg-handle" />
+        <div className="dlg-title">🎒 준비물 리스트</div>
+        <div className="dlg-sub">
+          {cityKorean} {parseInt(m)}월 {parseInt(d)}일 기준
+        </div>
+        <div className="pack-list">
+          {items.map((item, i) => (
+            <div key={i} className="pack-item">
+              <div className="pack-emoji">{item.icon}</div>
+              <div style={{ flex: 1 }}>
+                <div className="pack-name">{item.name}</div>
+                <div className="pack-why">{item.reason}</div>
+              </div>
+              <div className={`pack-tag ${item.priority === 'must' ? 't-must' : 't-rec'}`}>
+                {item.priority === 'must' ? '필수' : '권장'}
+              </div>
+            </div>
+          ))}
+        </div>
+        <button className="dlg-close" onClick={onClose}>닫기</button>
+      </div>
+    </div>
+  );
+};
+
+// ─── 메인 컴포넌트 ────────────────────────────────────────────────────────────
+const WeatherStats: React.FC<{ statistics: WeatherStatistics }> = ({ statistics }) => {
+  const [packingOpen, setPackingOpen] = useState(false);
+  const validYears = statistics.yearlyData.filter((d) => d.hours.length > 0);
+  const hasData = validYears.length > 0;
+
+  if (!hasData) {
+    return (
+      <div
+        className="bg-white rounded-2xl border border-amber-100 p-8 text-center"
+        style={{ boxShadow: '0 2px 12px rgba(245,158,11,0.08)' }}
+      >
+        <div className="text-5xl mb-4">🔄</div>
+        <h3 className="text-lg font-bold text-amber-700 mb-1">데이터 수집 전</h3>
+        <p className="text-sm text-amber-600">
+          <strong>{statistics.city_korean || statistics.city}</strong>의 날씨 데이터가 아직 수집되지 않았습니다.
+        </p>
+      </div>
+    );
+  }
+
+  const analysis = analyzeWeather(statistics);
+
+  return (
+    <>
+      <div className="body">
+
+        {/* 요약 */}
+        <SummaryCard text={analysis.summaryText} />
+
+        {/* 여행 적합도 */}
+        <VerdictCard verdict={analysis.verdict} />
+
+        {/* 기온 범위 */}
+        <SecLabel>기온 범위</SecLabel>
+        <TempRangeCard statistics={statistics.statistics} />
+
+        {/* 강수 */}
+        <SecLabel>강수</SecLabel>
+        <PrecipCard statistics={statistics.statistics} analysis={analysis} />
+
+        {/* 타임라인 */}
+        {statistics.statistics.hourlyAverages.length > 0 && (
+          <>
+            <SecLabel>하루 기온 흐름</SecLabel>
+            <TimelineCard
+              hourlyAverages={statistics.statistics.hourlyAverages}
+              bestTimeText={analysis.bestTimeText}
+            />
+          </>
+        )}
+
+        {/* 인근 날짜 */}
+        {analysis.nearbyRecs.length > 0 && (
+          <>
+            <SecLabel>더 좋은 날짜</SecLabel>
+            <NearbyDatesCard recs={analysis.nearbyRecs} />
+          </>
+        )}
+
+        {/* 활동 가이드 */}
+        <SecLabel>활동 가이드</SecLabel>
+        <ActivitiesGuide
+          activities={analysis.activities}
+          avoidItems={analysis.avoidItems}
+        />
+
+        {/* 기후 변화 */}
+        {analysis.trendText && (
+          <>
+            <SecLabel>기후 변화</SecLabel>
+            <TrendCard text={analysis.trendText} />
+          </>
+        )}
+
+        {/* 연도별 날씨 */}
+        <SecLabel>연도별 날씨 ({validYears.length}년)</SecLabel>
+        <div className="space-y-2 mb-4">
+          {[...statistics.yearlyData]
+            .sort((a, b) => b.year - a.year)
+            .map((d) => (
+              <YearCard key={d.year} dayData={d} />
+            ))}
+        </div>
+
+        <div style={{ height: 100 }} />
+      </div>
+
+      {/* 준비물 버튼 */}
+      <div className="sticky-wrap">
+        <button className="sticky-btn" onClick={() => setPackingOpen(true)}>
+          🎒 준비물 확인하기
+        </button>
+      </div>
+
+      {/* 준비물 다이얼로그 */}
+      <PackingDialog
+        isOpen={packingOpen}
+        onClose={() => setPackingOpen(false)}
+        items={analysis.packingItems}
+        cityKorean={statistics.city_korean || statistics.city}
+        date={statistics.date}
+      />
+    </>
   );
 };
 

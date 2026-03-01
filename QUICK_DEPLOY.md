@@ -1,174 +1,58 @@
-# 🚀 빠른 배포 가이드
+# 🚀 빠른 배포 가이드 — Vercel로 5분 안에 배포하기
 
-## ✨ 가장 쉬운 방법: Vercel로 5분 안에 배포하기
+## 준비물 체크 ✅
 
-### 준비 완료! ✅
-
-다음 파일들이 자동으로 생성되었습니다:
-- ✅ `vercel.json` - Vercel 설정
-- ✅ `api/` 폴더 - Serverless API Functions
-- ✅ `package.json` - 루트 의존성
-
-### 📋 배포 단계
-
-#### 방법 1: GitHub 연동 (가장 쉬움, 권장) ⭐
-
-1. **GitHub에 저장소 생성**
-   - https://github.com/new 접속
-   - 저장소 이름: `d-day-weather-web` (또는 원하는 이름)
-   - Public 또는 Private 선택
-   - "Create repository" 클릭
-
-2. **코드 푸시**
-   ```bash
-   # Git 초기화 (아직 안했다면)
-   git init
-   
-   # 모든 파일 추가
-   git add .
-   
-   # 커밋
-   git commit -m "Initial commit - D-Day Weather Web"
-   
-   # GitHub 저장소 연결 (YOUR_USERNAME을 본인 계정으로 변경)
-   git remote add origin https://github.com/YOUR_USERNAME/d-day-weather-web.git
-   
-   # 푸시
-   git branch -M main
-   git push -u origin main
-   ```
-
-3. **Vercel에서 배포**
-   - https://vercel.com 접속
-   - "Sign up" 또는 GitHub로 로그인
-   - "Add New Project" 클릭
-   - "Import Git Repository" → 방금 만든 저장소 선택
-   - "Import" 클릭
-   - **자동으로 빌드 및 배포 시작!** 🎉
-
-4. **완료!**
-   - 2-3분 후 배포 완료
-   - 자동으로 생성된 URL 확인 (예: `https://d-day-weather-web.vercel.app`)
-   - 이제부터 Git push할 때마다 자동 재배포!
+- [ ] GitHub 계정
+- [ ] Vercel 계정 (GitHub로 로그인)
+- [ ] Supabase 프로젝트 URL + anon key
 
 ---
 
-#### 방법 2: Vercel CLI 사용 (더 빠름)
+## 1단계: GitHub에 푸시
 
-1. **Vercel CLI 설치**
-   ```bash
-   npm install -g vercel
-   ```
-
-2. **로그인**
-   ```bash
-   vercel login
-   ```
-
-3. **배포 (한 줄!)**
-   ```bash
-   vercel --prod
-   ```
-
-4. **완료!**
-   - 터미널에 배포 URL 표시됨
-   - 1-2분 만에 완료!
-
----
-
-## 🎯 다른 배포 옵션
-
-### Netlify (프론트엔드만)
 ```bash
-# Netlify CLI 설치
-npm install -g netlify-cli
-
-# 로그인
-netlify login
-
-# 배포
-cd frontend
-netlify deploy --prod
+git add .
+git commit -m "deploy"
+git push origin main
 ```
 
-### Render (풀스택)
-1. https://render.com 접속
-2. "New" → "Web Service"
-3. GitHub 저장소 연결
-4. 설정:
-   - Build Command: `cd backend && npm install && npm run build`
-   - Start Command: `cd backend && npm start`
+---
+
+## 2단계: Vercel에서 프로젝트 연결
+
+1. [vercel.com/new](https://vercel.com/new) 접속
+2. GitHub 저장소 선택
+3. 설정 변경:
+   - **Framework Preset**: `Vite`
+   - **Root Directory**: `frontend`
 
 ---
 
-## ✅ 배포 후 확인
+## 3단계: 환경 변수 입력
 
-배포가 완료되면 다음을 확인하세요:
+| 변수명 | 값 |
+|---|---|
+| `VITE_SUPABASE_URL` | `https://xxxxxxxx.supabase.co` |
+| `VITE_SUPABASE_KEY` | Supabase anon key |
 
-1. **프론트엔드 로드**: 메인 페이지가 보이는지
-2. **API 작동**: 날씨 데이터가 표시되는지
-3. **날짜 선택**: 달력이 작동하는지
-4. **도시 선택**: 도시 목록이 로드되는지
-5. **모바일**: 모바일 브라우저에서도 확인
-
-### 테스트 URL
-배포 후 다음 URL들을 테스트해보세요:
-- `https://YOUR_URL.vercel.app/`
-- `https://YOUR_URL.vercel.app/api/weather/cities`
-- `https://YOUR_URL.vercel.app/api/weather/statistics?city=seoul&month=2&day=11`
+> Supabase 대시보드 → **Project Settings → API** 에서 확인
 
 ---
 
-## 🐛 문제 해결
+## 4단계: Deploy 클릭 🎉
 
-### "Build failed" 에러
-→ Vercel 대시보드에서 빌드 로그 확인
-→ `frontend/package.json`의 dependencies 확인
+배포 완료 후 `https://your-project.vercel.app` URL이 발급됩니다.
 
-### API가 404 에러
-→ `vercel.json`의 rewrites 설정 확인
-→ `api/` 폴더가 제대로 푸시되었는지 확인
-
-### CORS 에러
-→ 이미 설정되어 있음, 캐시 삭제 후 재시도
+이후 `git push`만 하면 자동으로 재배포됩니다.
 
 ---
 
-## 🎊 배포 완료 후
+## 문제 해결
 
-### README에 라이브 데모 추가
-```markdown
-## 🌐 Live Demo
+| 증상 | 해결 |
+|---|---|
+| 데이터가 안 불러와짐 | 환경 변수 `VITE_SUPABASE_URL`, `VITE_SUPABASE_KEY` 재확인 |
+| 빌드 실패 | Root Directory가 `frontend`로 설정되었는지 확인 |
+| 도시 목록이 비어있음 | Supabase `cities` 테이블 RLS 정책 확인 (anon SELECT 허용) |
 
-👉 [https://your-project.vercel.app](https://your-project.vercel.app)
-```
-
-### 공유하기
-- 포트폴리오에 추가
-- LinkedIn에 프로젝트 공유
-- Twitter/X에 트윗
-- 친구들에게 자랑! 😎
-
----
-
-## 💰 비용
-
-**Vercel 무료 티어**:
-- ✅ 무제한 프로젝트
-- ✅ 무제한 배포
-- ✅ 100GB Bandwidth/월
-- ✅ Serverless Functions
-- ✅ 자동 HTTPS
-- ✅ 글로벌 CDN
-
-→ **개인 프로젝트는 완전 무료!**
-
----
-
-## 📞 도움이 필요하신가요?
-
-- [Vercel 공식 문서](https://vercel.com/docs)
-- [Vercel Discord](https://vercel.com/discord)
-- [상세 배포 가이드](./DEPLOYMENT.md)
-
-**Happy Deploying! 🚀**
+> 자세한 배포 옵션은 [DEPLOYMENT.md](./DEPLOYMENT.md) 참조
