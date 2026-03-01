@@ -128,6 +128,37 @@ const TempRangeCard: React.FC<{ statistics: WeatherStatistics['statistics'] }> =
   );
 };
 
+// ─── 강수량 여행 영향 판정 ─────────────────────────────────────────────────────
+function precipImpact(avgMm: number, maxMm: number): { label: string; desc: string; color: string; barPct: number } {
+  if (avgMm < 1) return {
+    label: '거의 없음',
+    desc: '우산 없이도 괜찮아요. 야외 일정 자유롭게 잡으세요.',
+    color: '#10B981', barPct: 5,
+  };
+  if (avgMm < 5) return {
+    label: '가벼운 비',
+    desc: '잠깐 흩뿌리는 정도예요. 접이식 우산이면 충분합니다.',
+    color: '#3B82F6', barPct: 20,
+  };
+  if (avgMm < 15) return {
+    label: '보통',
+    desc: '우산은 꼭 챙기세요. 야외 일정은 실내 대안도 준비하면 좋아요.',
+    color: '#F59E0B', barPct: 45,
+  };
+  if (avgMm < 30) return {
+    label: '다소 많음',
+    desc: maxMm >= 40
+      ? '많이 내리는 해도 있어요. 방수 신발과 우비를 추천합니다.'
+      : '제법 내릴 수 있어요. 야외보다 실내 위주로 계획하세요.',
+    color: '#F97316', barPct: 70,
+  };
+  return {
+    label: '많음',
+    desc: '폭우 가능성이 있어요. 방수 장비 필수, 야외 일정은 최소화하세요.',
+    color: '#EF4444', barPct: 90,
+  };
+}
+
 // ─── 강수 카드 ────────────────────────────────────────────────────────────────
 const PrecipCard: React.FC<{
   statistics: WeatherStatistics['statistics'];
@@ -135,6 +166,8 @@ const PrecipCard: React.FC<{
 }> = ({ statistics, analysis }) => {
   const rainPct = Math.round(statistics.rainProbability);
   const snowPct = Math.round(statistics.snowProbability);
+  const avgMm = statistics.precipitation.average;
+  const maxMm = statistics.precipitation.highest;
   const freq =
     rainPct < 20 ? '5번 중 1번꼴' :
     rainPct < 30 ? '4번 중 1번꼴' :
@@ -145,6 +178,8 @@ const PrecipCard: React.FC<{
     analysis.rainGrade === 'LOW_RAIN' ? '☂️ 내리더라도 많지 않아요. 접이식 우산이면 충분해요.' :
     analysis.rainGrade === 'MID_RAIN' ? '☔ 비가 올 수 있어요. 우산을 꼭 챙기세요.' :
     '🌧️ 비가 올 가능성이 높아요. 우산은 필수예요.';
+
+  const impact = precipImpact(avgMm, maxMm);
 
   return (
     <>
@@ -164,6 +199,70 @@ const PrecipCard: React.FC<{
           </div>
         )}
       </div>
+
+      {/* 강수량 상세: 비 올 확률이 있을 때만 표시 */}
+      {analysis.rainGrade !== 'NO_RAIN' && <div className="card mb-3" style={{ marginTop: 8 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>
+            💧 예상 강수량
+          </div>
+          <div style={{
+            fontSize: 11, fontWeight: 700, padding: '3px 10px',
+            borderRadius: 20, background: `${impact.color}18`, color: impact.color,
+          }}>
+            {impact.label}
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 16, marginBottom: 14 }}>
+          <div style={{ flex: 1, textAlign: 'center', padding: '10px 0', background: 'var(--blue-pale)', borderRadius: 14 }}>
+            <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--blue-dark)' }}>
+              {avgMm.toFixed(1)}<span style={{ fontSize: 12, fontWeight: 500 }}>mm</span>
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--ink3)', marginTop: 2 }}>평균</div>
+          </div>
+          <div style={{ flex: 1, textAlign: 'center', padding: '10px 0', background: '#FFF7ED', borderRadius: 14 }}>
+            <div style={{ fontSize: 22, fontWeight: 800, color: '#EA580C' }}>
+              {maxMm.toFixed(1)}<span style={{ fontSize: 12, fontWeight: 500 }}>mm</span>
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--ink3)', marginTop: 2 }}>최대 (가장 많았던 해)</div>
+          </div>
+        </div>
+
+        {/* 강수량 바 */}
+        <div style={{ marginBottom: 10 }}>
+          <div style={{
+            height: 6, borderRadius: 3,
+            background: 'linear-gradient(90deg, #E0F2FE 0%, #3B82F6 50%, #EF4444 100%)',
+            position: 'relative', overflow: 'visible',
+          }}>
+            <div style={{
+              position: 'absolute', top: -3,
+              left: `${Math.min(95, impact.barPct)}%`,
+              width: 12, height: 12, borderRadius: '50%',
+              background: impact.color, border: '2px solid #fff',
+              boxShadow: `0 1px 4px ${impact.color}66`,
+              transform: 'translateX(-50%)',
+            }} />
+          </div>
+          <div style={{
+            display: 'flex', justifyContent: 'space-between',
+            fontSize: 9, color: 'var(--ink3)', marginTop: 6,
+          }}>
+            <span>0mm</span>
+            <span>15mm</span>
+            <span>30mm+</span>
+          </div>
+        </div>
+
+        <div style={{
+          fontSize: 12, color: 'var(--ink2)', lineHeight: 1.6,
+          padding: '10px 12px', background: '#F8FAFC', borderRadius: 12,
+        }}>
+          🧳 {impact.desc}
+        </div>
+      </div>}
+
       <div className="rain-note">{noteMsg}</div>
     </>
   );
