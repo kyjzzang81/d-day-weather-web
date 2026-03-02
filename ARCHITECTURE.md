@@ -56,10 +56,8 @@ d-day-weather-web/
 │       │   └── storage.ts           # 조회 이력 (localStorage)
 │       │
 │       └── components/
-│           ├── Home.tsx             # 히어로 영역 + 전체 레이아웃
-│           ├── WeatherStats.tsx     # 날씨 상세 카드 모음
-│           ├── DatePickerDialog.tsx # 날짜 선택 다이얼로그 (Portal)
-│           └── CitySelector.tsx    # 도시 선택 다이얼로그 (Portal)
+│           ├── Home.tsx             # 히어로 영역 + 검색 오버레이 + 전체 레이아웃
+│           └── WeatherStats.tsx     # 날씨 상세 카드 모음
 │
 ├── COLLECTION.md                    # Supabase 스키마 및 데이터 수집 가이드
 ├── weather-rule-table.md            # 날씨 규칙 엔진 설계 스펙
@@ -204,7 +202,7 @@ TempGrade × RainGrade 조합 매트릭스로 5단계 판정:
 
 ### 다이얼로그 처리
 
-`DatePickerDialog`와 `CitySelector`는 `ReactDOM.createPortal`을 사용하여 `document.body`에 직접 렌더링합니다. 이는 `.phone` 컨테이너의 `overflow: hidden`이 `position: fixed` 동작에 영향을 미치는 것을 방지합니다.
+`Home.tsx`의 검색 오버레이와 `WeatherStats.tsx`의 `PackingDialog`는 `ReactDOM.createPortal`을 사용하여 `document.body`에 직접 렌더링합니다. 이는 `.phone` 컨테이너의 `overflow: hidden`이 `position: fixed` 동작에 영향을 미치는 것을 방지합니다.
 
 ---
 

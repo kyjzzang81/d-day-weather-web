@@ -25,10 +25,8 @@
 - ✅ `index.css` — 글로벌 스타일 (CSS 변수 기반 블루 테마)
 
 #### 컴포넌트
-- ✅ `components/Home.tsx` — 히어로 영역 + 전체 레이아웃
+- ✅ `components/Home.tsx` — 히어로 영역 + 검색 오버레이(도시/날짜 선택) + 전체 레이아웃
 - ✅ `components/WeatherStats.tsx` — 날씨 상세 카드 모음 (8종 카드)
-- ✅ `components/DatePickerDialog.tsx` — 날짜 선택 (React Portal)
-- ✅ `components/CitySelector.tsx` — 도시 선택 (React Portal)
 
 #### 유틸리티
 - ✅ `utils/weatherApi.ts` — Supabase 쿼리 + 데이터 집계

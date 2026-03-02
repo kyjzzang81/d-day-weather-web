@@ -44,10 +44,8 @@ d-day-weather-web/
 ├── frontend/                    # React 프론트엔드
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── Home.tsx         # 히어로 영역 및 메인 레이아웃
-│   │   │   ├── WeatherStats.tsx # 날씨 상세 정보 (카드 모음)
-│   │   │   ├── DatePickerDialog.tsx  # 날짜 선택 다이얼로그
-│   │   │   └── CitySelector.tsx     # 도시 선택 다이얼로그
+│   │   │   ├── Home.tsx         # 히어로 영역, 검색 오버레이, 메인 레이아웃
+│   │   │   └── WeatherStats.tsx # 날씨 상세 정보 (카드 모음)
 │   │   ├── types/
 │   │   │   └── weather.ts       # TypeScript 타입 정의
 │   │   ├── utils/
