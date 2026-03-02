@@ -21,7 +21,7 @@ const DatePickerDialog: React.FC<DatePickerDialogProps> = ({
   if (!isOpen) return null;
 
   const handleConfirm = () => {
-    const month = selectedDate.getMonth() + 1; // 0-indexed to 1-indexed
+    const month = selectedDate.getMonth() + 1;
     const day = selectedDate.getDate();
     onSelectDate(month, day);
     onClose();
@@ -30,34 +30,35 @@ const DatePickerDialog: React.FC<DatePickerDialogProps> = ({
   return createPortal(
     <div className="dialog-overlay" onClick={onClose}>
       <div className="dialog-content" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-10 relative z-10">
-          <h2 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+          <h2 style={{ fontFamily: 'var(--font-head)', fontSize: 22, fontWeight: 700, color: 'var(--c-text)' }}>
             날짜 선택
           </h2>
           <button
             onClick={onClose}
-            className="w-12 h-12 flex items-center justify-center text-gray-400 hover:text-white 
-                     bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600
-                     rounded-full transition-all text-2xl font-bold shadow-lg hover:shadow-glow-pink
-                     hover:scale-110 active:scale-95"
-            aria-label="닫기"
+            style={{
+              width: 36, height: 36, borderRadius: 10,
+              background: 'var(--c-surf)', border: '1px solid var(--c-line)',
+              color: 'var(--c-dim)', fontSize: 18, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
           >
             ×
           </button>
         </div>
 
-        <div className="flex justify-center mb-10 relative z-10">
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 24 }}>
           <DatePicker
             selected={selectedDate}
             onChange={(date) => date && setSelectedDate(date)}
             inline
             dateFormat="MM월 dd일"
-            maxDate={new Date(2026, 11, 31)} // 2026-12-31
-            minDate={new Date(2026, 0, 1)} // 2026-01-01
+            maxDate={new Date(2026, 11, 31)}
+            minDate={new Date(2026, 0, 1)}
           />
         </div>
 
-        <div className="flex gap-4 justify-end relative z-10">
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
           <button onClick={onClose} className="btn-secondary">
             취소
           </button>

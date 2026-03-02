@@ -56,101 +56,109 @@ const CitySelector: React.FC<CitySelectorProps> = ({
 
   return createPortal(
     <div className="dialog-overlay" onClick={onClose}>
-      <div className="dialog-content max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-10 relative z-10">
-          <h2 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+      <div className="dialog-content" style={{ maxHeight: '85vh', display: 'flex', flexDirection: 'column' }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+          <h2 style={{ fontFamily: 'var(--font-head)', fontSize: 22, fontWeight: 700, color: 'var(--c-text)' }}>
             도시 선택
           </h2>
           <button
             onClick={onClose}
-            className="w-12 h-12 flex items-center justify-center text-gray-400 hover:text-white 
-                     bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600
-                     rounded-full transition-all text-2xl font-bold shadow-lg hover:shadow-glow-pink
-                     hover:scale-110 active:scale-95"
-            aria-label="닫기"
+            style={{
+              width: 36, height: 36, borderRadius: 10,
+              background: 'var(--c-surf)', border: '1px solid var(--c-line)',
+              color: 'var(--c-dim)', fontSize: 18, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
           >
             ×
           </button>
         </div>
 
-        {/* 검색 입력 */}
-        <div className="mb-8 relative z-10">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="도시 검색..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-6 py-4 bg-gradient-to-r from-purple-50 to-pink-50 
-                       border-2 border-purple-200/50 rounded-[20px] 
-                       focus:outline-none focus:ring-4 focus:ring-purple-300/30 focus:border-purple-400
-                       transition-all text-base placeholder-gray-500 font-medium"
-            />
-            <span className="absolute right-5 top-1/2 -translate-y-1/2 text-2xl">🔍</span>
-          </div>
+        {/* 검색 */}
+        <div style={{ marginBottom: 16, position: 'relative' }}>
+          <input
+            type="text"
+            placeholder="도시 검색..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{
+              width: '100%', padding: '13px 16px',
+              background: 'var(--c-surf)', border: '1px solid var(--c-line)',
+              borderRadius: 12, fontSize: 14, color: 'var(--c-white)',
+              fontFamily: 'var(--font-sans)', outline: 'none',
+            }}
+          />
         </div>
 
         {/* 도시 목록 */}
-        <div className="flex-1 overflow-y-auto relative z-10">
+        <div style={{ flex: 1, overflowY: 'auto' }}>
           {loading && (
-            <div className="text-center py-16">
-              <div className="inline-block relative">
-                <div className="w-16 h-16 border-[3px] border-purple-200 rounded-full"></div>
-                <div className="absolute top-0 left-0 w-16 h-16 border-[3px] border-transparent border-t-purple-600 rounded-full animate-spin"></div>
-              </div>
-              <p className="mt-6 text-gray-600 font-semibold">로딩 중...</p>
+            <div style={{ textAlign: 'center', padding: '40px 0' }}>
+              <div
+                style={{
+                  width: 40, height: 40, margin: '0 auto',
+                  border: '3px solid var(--c-surf)',
+                  borderTop: '3px solid var(--c-acc1)',
+                  borderRadius: '50%',
+                  animation: 'spin 0.9s linear infinite',
+                }}
+              />
+              <p style={{ marginTop: 16, color: 'var(--c-dim)', fontSize: 13 }}>로딩 중...</p>
             </div>
           )}
 
           {error && (
-            <div className="text-center py-16">
-              <div className="text-5xl mb-4">😢</div>
-              <p className="text-red-600 font-semibold text-lg">{error}</p>
+            <div style={{ textAlign: 'center', padding: '40px 0' }}>
+              <div style={{ fontSize: 40, marginBottom: 8 }}>😢</div>
+              <p style={{ color: 'var(--c-acc4)', fontWeight: 600 }}>{error}</p>
             </div>
           )}
 
           {!loading && !error && filteredCities.length === 0 && (
-            <div className="text-center py-16">
-              <div className="text-5xl mb-4">🔍</div>
-              <p className="text-gray-500 font-semibold text-lg">
-                검색 결과가 없습니다.
-              </p>
+            <div style={{ textAlign: 'center', padding: '40px 0' }}>
+              <div style={{ fontSize: 40, marginBottom: 8 }}>🔍</div>
+              <p style={{ color: 'var(--c-dim)', fontSize: 14 }}>검색 결과가 없습니다.</p>
             </div>
           )}
 
           {!loading && !error && filteredCities.length > 0 && (
-            <div className="space-y-3">
-              {filteredCities.map((city) => (
-                <button
-                  key={city.id}
-                  onClick={() => handleSelectCity(city.id)}
-                  className={`w-full text-left px-6 py-5 rounded-[25px] transition-all duration-300
-                    ${
-                      city.id === currentCity
-                        ? 'bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white shadow-liquid-lg scale-105'
-                        : 'bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 border-2 border-purple-200/50 hover:shadow-liquid hover:scale-105'
-                    }`}
-                >
-                  <div className={`font-bold text-lg ${
-                    city.id === currentCity ? 'text-white' : 'text-gray-900'
-                  }`}>
-                    {city.nameKo} {city.id === currentCity && '✨'}
-                  </div>
-                  <div className={`text-sm mt-1 ${
-                    city.id === currentCity ? 'text-white/90' : 'text-gray-600'
-                  }`}>
-                    {city.name}, {city.country}
-                  </div>
-                </button>
-              ))}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {filteredCities.map((city) => {
+                const isSelected = city.id === currentCity;
+                return (
+                  <button
+                    key={city.id}
+                    onClick={() => handleSelectCity(city.id)}
+                    style={{
+                      width: '100%', textAlign: 'left',
+                      padding: '14px 16px', borderRadius: 14, cursor: 'pointer',
+                      border: isSelected ? '1px solid rgba(91,142,255,0.5)' : '1px solid var(--c-line)',
+                      background: isSelected ? 'rgba(91,142,255,0.15)' : 'var(--c-surf)',
+                      transition: 'all 0.15s',
+                      fontFamily: 'var(--font-sans)',
+                    }}
+                  >
+                    <div style={{
+                      fontSize: 14, fontWeight: 600,
+                      color: isSelected ? 'var(--c-acc1)' : 'var(--c-white)',
+                    }}>
+                      {city.nameKo} {isSelected && '✦'}
+                    </div>
+                    <div style={{
+                      fontSize: 11, marginTop: 2,
+                      color: isSelected ? 'rgba(91,142,255,0.7)' : 'var(--c-muted)',
+                    }}>
+                      {city.name}, {city.country}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
 
-        <div className="mt-8 flex justify-end relative z-10">
-          <button onClick={onClose} className="btn-secondary">
-            닫기
-          </button>
+        <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
+          <button onClick={onClose} className="btn-secondary">닫기</button>
         </div>
       </div>
     </div>,
