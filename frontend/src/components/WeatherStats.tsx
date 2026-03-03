@@ -297,7 +297,8 @@ const Slide3Temp: React.FC<{
 const Slide4Precip: React.FC<{
   statistics: WeatherStatistics['statistics'];
   analysis: WeatherAnalysis;
-}> = ({ statistics, analysis }) => {
+  onPackingClick: () => void;
+}> = ({ statistics, analysis, onPackingClick }) => {
   const rainPct = Math.round(statistics.rainProbability);
   const snowPct = Math.round(statistics.snowProbability);
   const avgMm = statistics.precipitation.average;
@@ -373,6 +374,10 @@ const Slide4Precip: React.FC<{
           <div className="precip-impact">🧳 {impact.desc}</div>
         </div>
       )}
+
+      <button className="packing-btn-inline" onClick={onPackingClick}>
+        🎒 준비물 확인하기
+      </button>
     </div>
   );
 };
@@ -700,7 +705,7 @@ const WeatherStats: React.FC<{ statistics: WeatherStatistics }> = ({ statistics 
     <Slide1Summary key="s1" statistics={statistics} analysis={analysis} />,
     <Slide2Verdict key="s2" analysis={analysis} />,
     <Slide3Temp key="s3" statistics={statistics.statistics} hourlyAverages={statistics.statistics.hourlyAverages} bestTimeText={analysis.bestTimeText} />,
-    <Slide4Precip key="s4" statistics={statistics.statistics} analysis={analysis} />,
+    <Slide4Precip key="s4" statistics={statistics.statistics} analysis={analysis} onPackingClick={() => setPackingOpen(true)} />,
     <Slide5Activities key="s5" activities={analysis.activities} avoidItems={analysis.avoidItems} />,
   ];
 
@@ -734,17 +739,6 @@ const WeatherStats: React.FC<{ statistics: WeatherStatistics }> = ({ statistics 
 
   return (
     <>
-      {/* 진행 도트 */}
-      <div className="slide-dots">
-        {slides.map((_, i) => (
-          <div
-            key={i}
-            className={`sdot ${i === currentSlide ? 'active' : ''}`}
-            onClick={() => goSlide(i)}
-          />
-        ))}
-      </div>
-
       {/* 슬라이드 */}
       <div className="slides-wrap">
         <div
@@ -763,13 +757,6 @@ const WeatherStats: React.FC<{ statistics: WeatherStatistics }> = ({ statistics 
         <button className="arr-btn" onClick={() => goSlide(currentSlide - 1)} disabled={currentSlide === 0}>←</button>
         <div className="arr-progress">{currentSlide + 1} / {TOTAL}</div>
         <button className="arr-btn" onClick={() => goSlide(currentSlide + 1)} disabled={currentSlide === TOTAL - 1}>→</button>
-      </div>
-
-      {/* 준비물 버튼 */}
-      <div className="packing-bar">
-        <button className="packing-btn" onClick={() => setPackingOpen(true)}>
-          🎒 준비물 확인하기
-        </button>
       </div>
 
       {/* 준비물 다이얼로그 */}

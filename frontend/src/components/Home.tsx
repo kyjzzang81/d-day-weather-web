@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import { WeatherStatistics, City } from "../types/weather";
 import { fetchWeatherStatistics, fetchCities } from "../utils/weatherApi";
-import { getSearchHistory, saveSearchHistory } from "../utils/storage";
+import { getSearchHistoryList, addSearchHistory } from "../utils/storage";
 import WeatherStats from "./WeatherStats";
 
 const POPULAR_CITIES = [
@@ -20,6 +20,7 @@ const POPULAR_CITIES = [
 const Home: React.FC = () => {
   const [screen, setScreen] = useState<"home" | "detail">("home");
   const [searchOpen, setSearchOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [softUI, setSoftUI] = useState(() => {
     return localStorage.getItem("theme") === "soft";
   });
@@ -48,17 +49,6 @@ const Home: React.FC = () => {
     fetchCities().then(setCities).catch(console.error);
   }, []);
 
-  useEffect(() => {
-    const history = getSearchHistory();
-    if (history) {
-      setSelectedCityId(history.city);
-      const [m, d] = history.date.split("-").map(Number);
-      setSelectedMonth(m);
-      setSelectedDay(d);
-      loadAndShowDetail(history.city, m, d);
-    }
-  }, []);
-
   const loadAndShowDetail = async (
     city: string,
     month: number,
@@ -71,7 +61,7 @@ const Home: React.FC = () => {
       const data = await fetchWeatherStatistics(city, month, day);
       setStatistics(data);
       const dateStr = `${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-      saveSearchHistory(city, dateStr);
+      addSearchHistory(city, dateStr, data.city_korean);
     } catch (err) {
       console.error(err);
       if (city !== "seoul") {
@@ -80,7 +70,7 @@ const Home: React.FC = () => {
           const fallback = await fetchWeatherStatistics("seoul", month, day);
           setStatistics(fallback);
           const dateStr = `${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-          saveSearchHistory("seoul", dateStr);
+          addSearchHistory("seoul", dateStr, fallback.city_korean);
         } catch {
           setError("날씨 데이터를 불러오는데 실패했습니다.");
         }
@@ -119,6 +109,31 @@ const Home: React.FC = () => {
     setStatistics(null);
   };
 
+  const historyList = getSearchHistoryList();
+  const historyRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!historyOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        historyRef.current &&
+        !historyRef.current.contains(e.target as Node)
+      ) {
+        setHistoryOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [historyOpen]);
+
+  const selectHistory = (city: string, month: number, day: number) => {
+    setHistoryOpen(false);
+    setSelectedCityId(city);
+    setSelectedMonth(month);
+    setSelectedDay(day);
+    loadAndShowDetail(city, month, day);
+  };
+
   const daysInMonth = new Date(2026, selectedMonth, 0).getDate();
   const filteredCities = searchInput.trim()
     ? cities.filter(
@@ -135,7 +150,45 @@ const Home: React.FC = () => {
 
   return (
     <div className="phone">
-      <div className="theme-toggle-wrap">
+      <div className="top-bar-wrap">
+        <div className="history-wrap" ref={historyRef}>
+          <button
+            className="history-btn"
+            onClick={() => setHistoryOpen((v) => !v)}
+            title="검색 기록"
+          >
+            📋
+          </button>
+          {historyOpen && (
+            <div className="history-dropdown">
+              <div className="history-dropdown-title">검색 기록</div>
+              {historyList.length === 0 ? (
+                <div className="history-empty">검색 기록이 없어요</div>
+              ) : (
+                <ul className="history-list">
+                  {historyList.map((h, i) => {
+                    const [m, d] = h.date.split("-").map(Number);
+                    return (
+                      <li key={`${h.city}-${h.date}-${i}`}>
+                        <button
+                          className="history-item"
+                          onClick={() => selectHistory(h.city, m, d)}
+                        >
+                          <span className="history-item-city">
+                            {h.cityNameKo || h.city}
+                          </span>
+                          <span className="history-item-date">
+                            {m}월 {d}일
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          )}
+        </div>
         <button
           className="theme-toggle-btn"
           onClick={() => setSoftUI((v) => !v)}
@@ -276,9 +329,9 @@ const Home: React.FC = () => {
                   Open-Meteo
                 </a>
               </p>
-              <p style={{ marginTop: 4 }}>
+              {/* <p style={{ marginTop: 4 }}>
                 1940-2025년 시간별 날씨 데이터 기반
-              </p>
+              </p> */}
             </div>
           )}
         </div>

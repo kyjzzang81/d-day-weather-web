@@ -136,4 +136,5 @@ export interface SearchHistory {
   city: string;
   date: string;
   timestamp: number;
+  cityNameKo?: string;
 }

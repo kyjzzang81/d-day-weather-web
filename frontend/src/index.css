@@ -1440,36 +1440,31 @@ body {
 }
 
 /* ── 준비물 버튼 + 바텀시트 ───────────────────────────────────────────────── */
-.packing-bar {
-  position: sticky;
-  bottom: 0;
-  z-index: 50;
-  padding: 12px 20px 20px;
-  background: var(--c-bg);
-}
-.packing-btn {
+.packing-btn-inline {
   width: 100%;
-  padding: 16px;
+  margin-top: 20px;
+  padding: 12px 16px;
   background: var(--c-acc1);
-  border: none;
-  border-radius: 14px;
-  cursor: pointer;
-  font-size: 16px;
-  font-weight: 600;
   color: #fff;
-  letter-spacing: -0.01em;
-  box-shadow: 0 2px 8px rgba(104, 90, 255, 0.2);
+  border: none;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-sans);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
-  font-family: var(--font-sans);
-  transition: transform 0.15s;
+  gap: 6px;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(104, 90, 255, 0.2);
 }
-.packing-btn:active {
+.packing-btn-inline:hover {
+  box-shadow: 0 4px 14px rgba(104, 90, 255, 0.3);
+}
+.packing-btn-inline:active {
   transform: scale(0.98);
 }
-
 .overlay {
   display: none;
   position: fixed;
@@ -1783,11 +1778,107 @@ body {
 }
 
 /* ── 테마 토글 ────────────────────────────────────────────────────────── */
-.theme-toggle-wrap {
+.top-bar-wrap {
   position: fixed;
   top: 14px;
   right: 14px;
   z-index: 300;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+.history-wrap {
+  position: relative;
+}
+.history-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: var(--c-card);
+  box-shadow: var(--card-sh);
+  color: var(--c-dim);
+}
+.history-btn:hover {
+  transform: scale(1.08);
+}
+.history-btn:active {
+  transform: scale(0.95);
+}
+.history-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 200px;
+  max-width: 260px;
+  max-height: 280px;
+  overflow-y: auto;
+  background: var(--c-card);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  padding: 12px 0;
+}
+.history-dropdown-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--c-muted);
+  letter-spacing: 0.04em;
+  padding: 0 16px 10px;
+  border-bottom: 1px solid var(--c-line);
+  margin-bottom: 8px;
+}
+.history-empty {
+  font-size: 14px;
+  color: var(--c-muted);
+  padding: 20px 16px;
+  text-align: center;
+}
+.history-list {
+  list-style: none;
+}
+.history-item {
+  width: 100%;
+  text-align: left;
+  padding: 12px 16px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition: background 0.15s;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+.history-item:hover {
+  background: var(--c-surf);
+}
+.history-item-city {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--c-text);
+}
+.history-item-date {
+  font-size: 12px;
+  color: var(--c-muted);
+}
+[data-theme="soft"] .history-btn {
+  box-shadow: var(--neu-raised);
+}
+[data-theme="soft"] .history-btn:active {
+  box-shadow: var(--neu-inset);
+  transform: scale(0.95);
+}
+[data-theme="soft"] .history-dropdown {
+  background: var(--c-card);
+  box-shadow: var(--neu-raised-lg);
 }
 .theme-toggle-btn {
   width: 42px;
@@ -2177,15 +2268,6 @@ body {
 }
 
 /* ── 준비물 ───────────────────────────────────────────────────────────── */
-[data-theme="soft"] .packing-btn {
-  border-radius: 18px;
-  box-shadow: var(--neu-raised);
-}
-[data-theme="soft"] .packing-btn:active {
-  box-shadow: var(--neu-inset);
-  transform: none;
-}
-
 [data-theme="soft"] .dialog {
   background: var(--c-bg);
   box-shadow:
@@ -2449,10 +2531,14 @@ body {
 }
 
 /* ── packing ──────────────────────────────────────────────────────────── */
-[data-theme="soft"] .packing-btn {
+[data-theme="soft"] .packing-btn-inline {
   background: var(--soft-peri);
   color: #fff;
   box-shadow: var(--neu-raised), 0 4px 14px rgba(123,147,219,0.3);
+}
+[data-theme="soft"] .packing-btn-inline:active {
+  box-shadow: var(--neu-inset);
+  transform: scale(0.98);
 }
 [data-theme="soft"] .t-must {
   background: rgba(123,147,219,0.14);
