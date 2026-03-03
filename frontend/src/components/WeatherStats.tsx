@@ -331,7 +331,7 @@ const Slide4Precip: React.FC<{
         {snowPct > 0 ? (
           <div className="rain-big-card">
             <div className="rbc-icon">🌨️</div>
-            <div className="rbc-val" style={{ color: '#9CCFFF' }}>{snowPct}%</div>
+            <div className="rbc-val" style={{ color: 'var(--c-acc5)' }}>{snowPct}%</div>
             <div className="rbc-name">눈 올 확률</div>
             <div className="rbc-freq">{snowPct < 10 ? '드물게 있음' : '종종 있음'}</div>
           </div>
@@ -520,9 +520,9 @@ const Slide7Years: React.FC<{ statistics: WeatherStatistics }> = ({ statistics }
 
   function barColor(temp: number) {
     const pct = (temp - allMin) / range;
-    if (pct > 0.7) return 'linear-gradient(90deg,var(--c-acc2),rgba(255,91,91,0.5))';
-    if (pct > 0.4) return 'linear-gradient(90deg,var(--c-acc1),rgba(184,230,110,0.5))';
-    return 'linear-gradient(90deg,rgba(104,90,255,0.6),rgba(156,207,255,0.35))';
+    if (pct > 0.7) return 'var(--c-acc2)';
+    if (pct > 0.4) return 'var(--c-acc1)';
+    return 'var(--c-acc5)';
   }
 
   return (
