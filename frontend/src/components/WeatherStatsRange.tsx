@@ -8,44 +8,26 @@ import {
   ActivityItem,
   AvoidItem,
   PackingItem,
-  NearbyRec,
 } from "../utils/weatherRules";
 
-// ─── 유틸 함수 ──────────────────────────────────────────────────────────────
-
-function getLottieFromWeatherCode(code: number): string {
-  if ([45, 48].includes(code)) return "/weather-foggy.lottie";
-  if ((code >= 71 && code <= 77) || code === 85 || code === 86)
-    return "/weather-light-snow.lottie";
-  if (code >= 80 && code <= 82) return "/weather-light-rain.lottie";
-  if (code >= 51 && code <= 67) return "/weather-heavy-rain.lottie";
-  if (code >= 95) return "/weather-heavy-rain.lottie";
-  if (code <= 1) return "/weather-sunny.lottie";
-  if (code <= 3) return "/weather-partly-cloudy.lottie";
-  return "/weather-partly-cloudy.lottie";
-}
-
-function getLottieFromNearbyIcon(icon: string): string {
-  if (icon === "☀️") return "/weather-sunny.lottie";
-  if (icon === "🌸" || icon === "🌤️") return "/weather-partly-cloudy.lottie";
-  if (icon === "☁️") return "/weather-foggy.lottie";
-  if (icon === "❄️") return "/weather-light-snow.lottie";
-  return "/weather-partly-cloudy.lottie";
-}
+// ─── 유틸 ────────────────────────────────────────────────────────────────────
 
 function getWeatherLottie(stats: WeatherStatistics["statistics"]): string {
   if (stats.avgWindSpeed >= 25) return "/weather-windy.lottie";
-  const snowP = stats.snowProbability;
-  const rainP = stats.rainProbability;
-  const clearP = stats.clearProbability;
-  const avgPrecip = stats.precipitation.average;
+  const {
+    snowProbability: snowP,
+    rainProbability: rainP,
+    clearProbability: clearP,
+    precipitation,
+  } = stats;
+  const avg = precipitation.average;
   if (snowP >= 30)
-    return avgPrecip >= 3
+    return avg >= 3
       ? "/weather-heavy-snow.lottie"
       : "/weather-light-snow.lottie";
   if (snowP >= 15) return "/weather-light-snow.lottie";
   if (rainP >= 40)
-    return avgPrecip >= 5
+    return avg >= 5
       ? "/weather-heavy-rain.lottie"
       : "/weather-light-rain.lottie";
   if (rainP >= 20) return "/weather-light-rain.lottie";
@@ -75,46 +57,16 @@ function getYearlyLottie(d: {
   return "/weather-partly-cloudy.lottie";
 }
 
-function BoldText({ text }: { text: string }) {
-  const parts = text.split(/\*\*(.+?)\*\*/g);
-  return (
-    <>{parts.map((p, i) => (i % 2 === 1 ? <strong key={i}>{p}</strong> : p))}</>
-  );
-}
-
-function precipImpact(avgMm: number, maxMm: number) {
-  if (avgMm < 1)
-    return {
-      label: "거의 없음",
-      desc: "우산 없이도 괜찮아요. 야외 일정 자유롭게 잡으세요.",
-      colorVar: "--c-primary",
-    };
-  if (avgMm < 5)
-    return {
-      label: "가벼운 비",
-      desc: "잠깐 흩뿌리는 정도예요. 접이식 우산이면 충분합니다.",
-      colorVar: "--c-primary",
-    };
-  if (avgMm < 15)
-    return {
-      label: "보통",
-      desc: "우산은 꼭 챙기세요. 야외 일정은 실내 대안도 준비하면 좋아요.",
-      colorVar: "--c-negative",
-    };
-  if (avgMm < 30)
-    return {
-      label: "다소 많음",
-      desc:
-        maxMm >= 40
-          ? "많이 내리는 해도 있어요. 방수 신발과 우비를 추천합니다."
-          : "제법 내릴 수 있어요. 야외보다 실내 위주로 계획하세요.",
-      colorVar: "--c-negative",
-    };
-  return {
-    label: "많음",
-    desc: "폭우 가능성이 있어요. 방수 장비 필수, 야외 일정은 최소화하세요.",
-    colorVar: "--c-negative",
-  };
+function getLottieFromWeatherCode(code: number): string {
+  if ([45, 48].includes(code)) return "/weather-foggy.lottie";
+  if ((code >= 71 && code <= 77) || code === 85 || code === 86)
+    return "/weather-light-snow.lottie";
+  if (code >= 80 && code <= 82) return "/weather-light-rain.lottie";
+  if (code >= 51 && code <= 67) return "/weather-heavy-rain.lottie";
+  if (code >= 95) return "/weather-heavy-rain.lottie";
+  if (code <= 1) return "/weather-sunny.lottie";
+  if (code <= 3) return "/weather-partly-cloudy.lottie";
+  return "/weather-partly-cloudy.lottie";
 }
 
 interface TimePeriod {
@@ -173,63 +125,82 @@ function buildNarrativeTitle(
   a: TimePeriod,
   e: TimePeriod,
 ): string {
-  if (m.sky === a.sky && a.sky === e.sky) return `하루 종일 ${m.sky},\n${city}`;
+  if (m.sky === a.sky && a.sky === e.sky) return `기간 내내 ${m.sky},\n${city}`;
   if (m.sky === a.sky) return `${m.sky} 낮,\n${e.sky} 저녁의 ${city}`;
   if (a.sky === e.sky) return `${m.sky} 아침,\n${a.sky} 오후의 ${city}`;
   return `${m.sky} 아침, ${a.sky} 오후,\n${e.sky} 저녁의 ${city}`;
 }
 
-function describeYearWeather(
-  hours: {
-    hour: number;
-    weather_code: number;
-    precipitation: number;
-    rain: number;
-    snowfall: number;
-    cloud_cover: number;
-  }[],
-): string {
-  if (hours.length === 0) return "";
-  const parts: string[] = [];
-  const rainHours = hours.filter((h) => h.rain > 0);
-  if (rainHours.length > 0) {
-    const totalRain = rainHours.reduce((s, h) => s + h.rain, 0);
-    const from = Math.min(...rainHours.map((h) => h.hour));
-    const to = Math.max(...rainHours.map((h) => h.hour));
-    const amount =
-      totalRain < 2 ? "약한 비" : totalRain < 10 ? "보통 비" : "강한 비";
-    parts.push(`🌧 ${from}시~${to}시 ${amount}(${totalRain.toFixed(1)}mm)`);
-  }
-  const snowHours = hours.filter((h) => h.snowfall > 0);
-  if (snowHours.length > 0) {
-    const totalSnow = snowHours.reduce((s, h) => s + h.snowfall, 0);
-    const from = Math.min(...snowHours.map((h) => h.hour));
-    const to = Math.max(...snowHours.map((h) => h.hour));
-    const amount =
-      totalSnow < 1 ? "가벼운 눈" : totalSnow < 5 ? "보통 눈" : "많은 눈";
-    parts.push(`❄️ ${from}시~${to}시 ${amount}(${totalSnow.toFixed(1)}cm)`);
-  }
-  if (parts.length === 0) {
-    const cloudyHours = hours.filter((h) => h.cloud_cover > 70);
-    if (cloudyHours.length >= 6) {
-      parts.push(
-        `☁️ ${Math.min(...cloudyHours.map((h) => h.hour))}시~${Math.max(...cloudyHours.map((h) => h.hour))}시 흐림`,
-      );
-    } else {
-      const clearHours = hours.filter((h) => h.cloud_cover < 30);
-      parts.push(clearHours.length >= 6 ? "☀️ 대체로 맑음" : "⛅ 구름 조금");
-    }
-  }
-  return parts.join(" / ");
+function BoldText({ text }: { text: string }) {
+  const parts = text.split(/\*\*(.+?)\*\*/g);
+  return (
+    <>{parts.map((p, i) => (i % 2 === 1 ? <strong key={i}>{p}</strong> : p))}</>
+  );
 }
 
-// ─── Reel 1: 날씨 요약 + 여행 적합도 ────────────────────────────────────────
-const Reel1Summary: React.FC<{
+function precipImpact(avgMm: number, maxMm: number) {
+  if (avgMm < 1)
+    return {
+      label: "거의 없음",
+      desc: "우산 없이도 괜찮아요.",
+      colorVar: "--c-primary",
+    };
+  if (avgMm < 5)
+    return {
+      label: "가벼운 비",
+      desc: "접이식 우산이면 충분합니다.",
+      colorVar: "--c-primary",
+    };
+  if (avgMm < 15)
+    return {
+      label: "보통",
+      desc: "우산은 꼭 챙기세요.",
+      colorVar: "--c-negative",
+    };
+  if (avgMm < 30)
+    return {
+      label: "다소 많음",
+      desc:
+        maxMm >= 40
+          ? "방수 신발과 우비를 추천합니다."
+          : "야외보다 실내 위주로 계획하세요.",
+      colorVar: "--c-negative",
+    };
+  return {
+    label: "많음",
+    desc: "방수 장비 필수, 야외 일정은 최소화하세요.",
+    colorVar: "--c-negative",
+  };
+}
+
+/** "MM-DD~MM-DD" → startStr, endStr, nights */
+function parseDateRange(date: string): {
+  startStr: string;
+  endStr: string;
+  nights: number;
+} {
+  if (!date.includes("~")) return { startStr: date, endStr: date, nights: 0 };
+  const [start, end] = date.split("~");
+  const [sm, sd] = start.split("-").map(Number);
+  const [em, ed] = end.split("-").map(Number);
+  const s = new Date(2024, sm - 1, sd);
+  const e = new Date(2024, em - 1, ed);
+  const nights = Math.max(
+    1,
+    Math.round((e.getTime() - s.getTime()) / 86400000),
+  );
+  return { startStr: `${sm}월 ${sd}일`, endStr: `${em}월 ${ed}일`, nights };
+}
+
+// ─── Reel 1: 날씨 요약 (날짜 버전과 구조 통일 + 기간 컨텍스트 추가) ──────────
+const RangeReel1: React.FC<{
   statistics: WeatherStatistics;
   analysis: WeatherAnalysis;
 }> = ({ statistics, analysis }) => {
   const s = statistics.statistics;
   const ha = s.hourlyAverages;
+  const cityName = statistics.city_korean || statistics.city;
+
   const morning = describeTimePeriod(
     ha.filter((h) => h.hour >= 6 && h.hour < 12),
   );
@@ -239,8 +210,9 @@ const Reel1Summary: React.FC<{
   const evening = describeTimePeriod(
     ha.filter((h) => h.hour >= 18 && h.hour < 22),
   );
-  const cityName = statistics.city_korean || statistics.city;
   const title = buildNarrativeTitle(cityName, morning, afternoon, evening);
+
+  const { startStr, endStr, nights } = parseDateRange(statistics.date);
   const { verdict } = analysis;
   const stars = "⭐".repeat(verdict.stars);
 
@@ -261,7 +233,8 @@ const Reel1Summary: React.FC<{
 
   return (
     <div className="reel-content">
-      <div className="slide-title s1-narrative">
+      {/* 내러티브 타이틀 (날짜 버전과 동일 구조) */}
+      <div className="slide-title s1-narrative" style={{ fontSize: 22 }}>
         {title.split("\n").map((line, i) => (
           <React.Fragment key={i}>
             {i > 0 && <br />}
@@ -270,6 +243,18 @@ const Reel1Summary: React.FC<{
         ))}
       </div>
 
+      {/* 기간 배지 (기간 버전 전용) */}
+      <div className="range-period-badge">
+        <span className="rpb-dates">
+          {startStr} ~ {endStr}
+        </span>
+        <span className="rpb-sep">·</span>
+        <span className="rpb-nights">
+          {nights}박 {nights + 1}일
+        </span>
+      </div>
+
+      {/* Lottie */}
       <div className="s1-illust">
         <DotLottieReact
           src={getWeatherLottie(s)}
@@ -279,25 +264,29 @@ const Reel1Summary: React.FC<{
         />
       </div>
 
-      <div className="s1-tl-row">
-        {[
-          { label: "오전", p: morning },
-          { label: "오후", p: afternoon },
-          { label: "저녁", p: evening },
-        ].map(({ label, p }) => (
-          <div key={label} className="s1-tl-cell">
-            <DotLottieReact
-              src={p.lottie}
-              loop
-              autoplay
-              style={{ width: 32, height: 32 }}
-            />
-            <div className="s1-tl-temp">{p.temp}°</div>
-            <div className="s1-tl-label">{label}</div>
-          </div>
-        ))}
-      </div>
+      {/* 시간대별 날씨 row (날짜 버전과 동일 구조) */}
+      {ha.length > 0 && (
+        <div className="s1-tl-row">
+          {[
+            { label: "오전", p: morning },
+            { label: "오후", p: afternoon },
+            { label: "저녁", p: evening },
+          ].map(({ label, p }) => (
+            <div key={label} className="s1-tl-cell">
+              <DotLottieReact
+                src={p.lottie}
+                loop
+                autoplay
+                style={{ width: 32, height: 32 }}
+              />
+              <div className="s1-tl-temp">{p.temp}°</div>
+              <div className="s1-tl-label">{label}</div>
+            </div>
+          ))}
+        </div>
+      )}
 
+      {/* 통계 row (바람/습도/강수확률 — 날짜 버전과 동일) */}
       <div className="s1-stats">
         <div className="s1-stat">
           <div className="s1-stat-val">{Math.round(s.avgWindSpeed)}km/h</div>
@@ -313,6 +302,7 @@ const Reel1Summary: React.FC<{
         </div>
       </div>
 
+      {/* 여행 적합도 verdict */}
       <div className="verdict-inline">
         <div className="vi-left">
           {stars && <span className="vi-stars">{stars}</span>}
@@ -343,22 +333,24 @@ const Reel1Summary: React.FC<{
   );
 };
 
-// ─── Reel 2: 기온 분포 ──────────────────────────────────────────────────────
-const Reel2Temp: React.FC<{
+// ─── Reel 2: 기온 분포 (날짜 버전과 타이틀/라벨 통일) ──────────────────────
+const RangeReel2Temp: React.FC<{
   statistics: WeatherStatistics;
   bestTimeText: string;
   onYearlyClick: () => void;
 }> = ({ statistics, bestTimeText, onYearlyClick }) => {
   const s = statistics.statistics;
   const { temperature, trend } = s;
-  const hourlyAverages = s.hourlyAverages;
   const avg = Math.round(temperature.avg.average);
   const min = Math.round(temperature.min.lowest);
   const max = Math.round(temperature.max.highest);
   const range = max - min || 1;
   const avgPct = ((avg - min) / range) * 100;
   const trendDiff = trend.diff;
-  const validYears = statistics.yearlyData.filter((d) => d.hours.length > 0);
+  const ha = s.hourlyAverages;
+  const validYears = statistics.yearlyData.filter(
+    (d) => d.tempMax !== 0 || d.tempMin !== 0,
+  );
 
   return (
     <div className="reel-content">
@@ -400,11 +392,11 @@ const Reel2Temp: React.FC<{
         </div>
       </div>
 
-      {hourlyAverages.length > 0 && (
+      {ha.length > 0 && (
         <>
           <div className="temp-bar-title">하루 기온 흐름</div>
           <div className="hourly-mini">
-            {hourlyAverages
+            {ha
               .filter((h) => h.hour % 2 === 0 || h.hour % 3 === 0)
               .filter((_, i) => i < 10)
               .map((h) => (
@@ -439,90 +431,8 @@ const Reel2Temp: React.FC<{
   );
 };
 
-// ─── 연도별 기록 바텀시트 ────────────────────────────────────────────────────
-const YearlyDialog: React.FC<{
-  isOpen: boolean;
-  onClose: () => void;
-  statistics: WeatherStatistics;
-}> = ({ isOpen, onClose, statistics }) => {
-  if (!isOpen) return null;
-
-  const validYears = statistics.yearlyData.filter((d) => d.hours.length > 0);
-  const allMax = Math.max(...validYears.map((d) => d.tempMax), 1);
-  const allMin = Math.min(...validYears.map((d) => d.tempMin), 0);
-  const yrRange = allMax - allMin || 1;
-  function barColor(temp: number) {
-    const pct = (temp - allMin) / yrRange;
-    if (pct > 0.7) return "var(--c-negative)";
-    if (pct > 0.4) return "var(--c-primary)";
-    return "var(--c-primary)";
-  }
-
-  return createPortal(
-    <div
-      className="overlay open"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div className="dialog">
-        <div className="dlg-handle" />
-        <div className="dlg-title">📊 연도별 실제 기록</div>
-        <div className="dlg-sub">
-          최근 {validYears.length}년간 이날의 실제 날씨 기록이에요
-        </div>
-        <div className="pack-list">
-          <div className="yr-chart">
-            {[...validYears]
-              .sort((a, b) => b.year - a.year)
-              .map((d) => {
-                const widthPct = Math.max(
-                  10,
-                  ((d.tempMax - allMin) / yrRange) * 100,
-                );
-                const detail = describeYearWeather(d.hours);
-                return (
-                  <div key={d.year} className="yr-card">
-                    <div className="yr-header">
-                      <DotLottieReact
-                        src={getYearlyLottie(d)}
-                        loop
-                        autoplay
-                        style={{ width: 32, height: 32, flexShrink: 0 }}
-                      />
-                      <div className="yr-year">{d.year}</div>
-                      <div className="yr-temps">
-                        <span className="yr-hi">{d.tempMax.toFixed(0)}°</span>
-                        <span className="yr-sep">/</span>
-                        <span className="yr-lo">{d.tempMin.toFixed(0)}°</span>
-                      </div>
-                    </div>
-                    <div className="yr-bar-wrap">
-                      <div
-                        className="yr-bar"
-                        style={{
-                          width: `${widthPct}%`,
-                          background: barColor(d.tempMax),
-                        }}
-                      />
-                    </div>
-                    <div className="yr-detail">{detail}</div>
-                  </div>
-                );
-              })}
-          </div>
-        </div>
-        <button className="dlg-close" onClick={onClose}>
-          닫기
-        </button>
-      </div>
-    </div>,
-    document.body,
-  );
-};
-
-// ─── Reel 3: 강수 ───────────────────────────────────────────────────────────
-const Reel3Precip: React.FC<{
+// ─── Reel 3: 강수 (날짜 버전과 타이틀/라벨 통일) ────────────────────────────
+const RangeReel3Precip: React.FC<{
   statistics: WeatherStatistics["statistics"];
   analysis: WeatherAnalysis;
   onPackingClick: () => void;
@@ -713,12 +623,11 @@ const Reel3Precip: React.FC<{
 };
 
 // ─── Reel 4: 추천 활동 ──────────────────────────────────────────────────────
-const Reel4Good: React.FC<{ activities: ActivityItem[] }> = ({
+const RangeReel4Good: React.FC<{ activities: ActivityItem[] }> = ({
   activities,
 }) => (
   <div className="reel-content">
     <div className="slide-title">뭘 해볼지 고민이라면?</div>
-
     <div className="act-panel show">
       {activities.map((a, i) => (
         <div key={i} className="act-card">
@@ -737,10 +646,11 @@ const Reel4Good: React.FC<{ activities: ActivityItem[] }> = ({
 );
 
 // ─── Reel 5: 주의사항 ───────────────────────────────────────────────────────
-const Reel5Bad: React.FC<{ avoidItems: AvoidItem[] }> = ({ avoidItems }) => (
+const RangeReel5Bad: React.FC<{ avoidItems: AvoidItem[] }> = ({
+  avoidItems,
+}) => (
   <div className="reel-content">
     <div className="slide-title">이건 피하세요🥹</div>
-
     <div className="act-panel show">
       {avoidItems.length === 0 ? (
         <div className="act-card">
@@ -772,65 +682,9 @@ const Reel5Bad: React.FC<{ avoidItems: AvoidItem[] }> = ({ avoidItems }) => (
   </div>
 );
 
-// ─── Reel 6: 날짜 추천 ──────────────────────────────────────────────────────
-const Reel6Nearby: React.FC<{ recs: NearbyRec[] }> = ({ recs }) => {
-  const DAYS = ["일", "월", "화", "수", "목", "금", "토"];
-  return (
-    <div className="reel-content">
-      <div className="slide-title">더 좋은 날짜가 있을까?</div>
-      <div className="slide-desc">
-        ±7일 기준, 날씨 점수가 높은 날을 골랐어요.
-      </div>
-
-      <div className="alt-cards">
-        {recs.map((r) => {
-          const dt = new Date(2026, r.month - 1, r.day);
-          const dayStr = DAYS[dt.getDay()];
-          const badgeCls =
-            r.tag === "best"
-              ? "badge-best"
-              : r.tag === "good"
-                ? "badge-rec"
-                : "badge-ref";
-          return (
-            <div
-              key={`${r.month}-${r.day}`}
-              className={`alt-card ${r.tag === "best" ? "best" : ""}`}
-            >
-              <div className="alt-emo">
-                <DotLottieReact
-                  src={getLottieFromNearbyIcon(r.icon)}
-                  loop
-                  autoplay
-                  style={{ width: 40, height: 40 }}
-                />
-              </div>
-              <div className="alt-body">
-                <div className="alt-d">
-                  {r.month}월 {r.day}일 · {dayStr}요일
-                </div>
-                <div className="alt-n">{r.compareSummary}</div>
-                <div className="alt-s">
-                  맑음 {Math.round(r.clearPct)}% · 강수 {Math.round(r.rainPct)}%
-                </div>
-              </div>
-              <div className="alt-r">
-                <div className="alt-hi">{Math.round(r.tempMax)}°</div>
-                <div className="alt-lo">{Math.round(r.tempMin)}°</div>
-                <div className={`alt-badge ${badgeCls}`}>{r.tagLabel}</div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-};
-
-// ─── Reel 7: 기후 변화 (최고/최저 추가) ─────────────────────────────────────
-const Reel7Climate: React.FC<{
+// ─── Reel 6: 기후 변화 (날짜 버전과 라벨/타이틀 통일) ──────────────────────
+const RangeReel6Climate: React.FC<{
   statistics: WeatherStatistics;
-  analysis: WeatherAnalysis;
 }> = ({ statistics }) => {
   const { trend } = statistics.statistics;
   const { diff, maxDiff, minDiff } = trend;
@@ -842,7 +696,7 @@ const Reel7Climate: React.FC<{
     {
       icon: "🌡️",
       label: "평균 기온",
-      diff: diff,
+      diff,
       old: trend.olderAvgTemp,
       recent: trend.recentAvgTemp,
     },
@@ -974,22 +828,9 @@ const PackingDialog: React.FC<{
   onClose: () => void;
   items: PackingItem[];
   cityKorean: string;
-  date: string;
-}> = ({ isOpen, onClose, items, cityKorean, date }) => {
+  dateDisplay: string;
+}> = ({ isOpen, onClose, items, cityKorean, dateDisplay }) => {
   if (!isOpen) return null;
-  const isRange = date.includes("~");
-  const dateDisplay = isRange
-    ? (() => {
-        const [start, end] = date.split("~");
-        const [sm, sd] = start.split("-");
-        const [em, ed] = end.split("-");
-        return `${parseInt(sm)}월 ${parseInt(sd)}일 ~ ${parseInt(em)}월 ${parseInt(ed)}일`;
-      })()
-    : (() => {
-        const [m, d] = date.split("-");
-        return `${parseInt(m)}월 ${parseInt(d)}일`;
-      })();
-
   return createPortal(
     <div
       className="overlay open"
@@ -1028,17 +869,114 @@ const PackingDialog: React.FC<{
   );
 };
 
-// ─── 메인 컴포넌트 (릴스 스타일) ────────────────────────────────────────────
-const WeatherStats: React.FC<{ statistics: WeatherStatistics }> = ({
+// ─── 연도별 바텀시트 (기간 버전) ─────────────────────────────────────────────
+const YearlyRangeDialog: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  statistics: WeatherStatistics;
+}> = ({ isOpen, onClose, statistics }) => {
+  if (!isOpen) return null;
+
+  const validYears = statistics.yearlyData.filter(
+    (d) => d.tempMax !== 0 || d.tempMin !== 0,
+  );
+  const allMax = Math.max(...validYears.map((d) => d.tempMax), 1);
+  const allMin = Math.min(...validYears.map((d) => d.tempMin), 0);
+  const yrRange = allMax - allMin || 1;
+  const { startStr, endStr, nights } = parseDateRange(statistics.date);
+
+  function barColor(temp: number) {
+    const pct = (temp - allMin) / yrRange;
+    if (pct > 0.7) return "var(--c-negative)";
+    if (pct > 0.4) return "var(--c-primary)";
+    return "var(--c-primary)";
+  }
+
+  return createPortal(
+    <div
+      className="overlay open"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="dialog">
+        <div className="dlg-handle" />
+        <div className="dlg-title">📊 연도별 실제 기록</div>
+        <div className="dlg-sub">
+          {startStr} ~ {endStr} ({nights + 1}일) 기간 평균
+        </div>
+        <div className="pack-list">
+          <div className="yr-chart">
+            {[...validYears]
+              .sort((a, b) => b.year - a.year)
+              .map((d) => {
+                const widthPct = Math.max(
+                  10,
+                  ((d.tempMax - allMin) / yrRange) * 100,
+                );
+                const precipDesc =
+                  d.totalRain >= 10
+                    ? `🌧 강한 비 (${d.totalRain.toFixed(1)}mm)`
+                    : d.totalRain >= 1
+                      ? `🌧 약한 비 (${d.totalRain.toFixed(1)}mm)`
+                      : d.totalSnowfall >= 1
+                        ? `❄️ 눈 (${d.totalSnowfall.toFixed(1)}cm)`
+                        : "☀️ 대체로 맑음";
+
+                return (
+                  <div key={d.year} className="yr-card">
+                    <div className="yr-header">
+                      <DotLottieReact
+                        src={getYearlyLottie(d)}
+                        loop
+                        autoplay
+                        style={{ width: 32, height: 32, flexShrink: 0 }}
+                      />
+                      <div className="yr-year">{d.year}</div>
+                      <div className="yr-temps">
+                        <span className="yr-hi">{d.tempMax.toFixed(0)}°</span>
+                        <span className="yr-sep">/</span>
+                        <span className="yr-lo">{d.tempMin.toFixed(0)}°</span>
+                      </div>
+                    </div>
+                    <div className="yr-bar-wrap">
+                      <div
+                        className="yr-bar"
+                        style={{
+                          width: `${widthPct}%`,
+                          background: barColor(d.tempMax),
+                        }}
+                      />
+                    </div>
+                    <div className="yr-detail">{precipDesc}</div>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+        <button className="dlg-close" onClick={onClose}>
+          닫기
+        </button>
+      </div>
+    </div>,
+    document.body,
+  );
+};
+
+// ─── 메인: 기간 분석 컴포넌트 ───────────────────────────────────────────────
+const WeatherStatsRange: React.FC<{ statistics: WeatherStatistics }> = ({
   statistics,
 }) => {
   const [packingOpen, setPackingOpen] = useState(false);
   const [yearlyOpen, setYearlyOpen] = useState(false);
   const [activeReel, setActiveReel] = useState(0);
   const reelsRef = useRef<HTMLDivElement>(null);
-  const validYears = statistics.yearlyData.filter((d) => d.hours.length > 0);
 
-  if (validYears.length === 0) {
+  const hasData = statistics.yearlyData.some(
+    (d) => d.tempMax !== 0 || d.tempMin !== 0 || d.tempAvg !== 0,
+  );
+
+  if (!hasData) {
     return (
       <div
         style={{
@@ -1054,7 +992,6 @@ const WeatherStats: React.FC<{ statistics: WeatherStatistics }> = ({
             fontWeight: 600,
             color: "var(--c-negative)",
             marginBottom: 6,
-            letterSpacing: "-0.02em",
           }}
         >
           데이터 수집 전
@@ -1070,44 +1007,44 @@ const WeatherStats: React.FC<{ statistics: WeatherStatistics }> = ({
   }
 
   const analysis = analyzeWeather(statistics);
+  const { startStr, endStr } = parseDateRange(statistics.date);
+  const dateDisplay = `${startStr} ~ ${endStr}`;
+  const cityKorean = statistics.city_korean || statistics.city;
 
   const reels: React.ReactNode[] = [
-    <Reel1Summary key="r1" statistics={statistics} analysis={analysis} />,
-    <Reel2Temp
+    <RangeReel1 key="r1" statistics={statistics} analysis={analysis} />,
+    <RangeReel2Temp
       key="r2"
       statistics={statistics}
       bestTimeText={analysis.bestTimeText}
       onYearlyClick={() => setYearlyOpen(true)}
     />,
-    <Reel3Precip
+    <RangeReel3Precip
       key="r3"
       statistics={statistics.statistics}
       analysis={analysis}
       onPackingClick={() => setPackingOpen(true)}
     />,
-    <Reel4Good key="r4" activities={analysis.activities} />,
-    <Reel5Bad key="r5" avoidItems={analysis.avoidItems} />,
+    <RangeReel4Good key="r4" activities={analysis.activities} />,
+    <RangeReel5Bad key="r5" avoidItems={analysis.avoidItems} />,
+    <RangeReel6Climate key="r6" statistics={statistics} />,
   ];
-  const reelLabels = ["날씨 요약", "기온 & 옷차림", "예상 강수량", "추천 활동", "피할 것들"];
-
-  if (analysis.nearbyRecs.length > 0) {
-    reels.push(<Reel6Nearby key="r6" recs={analysis.nearbyRecs} />);
-    reelLabels.push("주변 좋은 날");
-  }
-  reels.push(
-    <Reel7Climate key="r7" statistics={statistics} analysis={analysis} />,
-  );
-  reelLabels.push("기후 변화");
+  const reelLabels = [
+    "날씨 요약",
+    "기온 & 옷차림",
+    "예상 강수량",
+    "추천 활동",
+    "피할 것들",
+    "기후 변화",
+  ];
 
   useEffect(() => {
     const container = reelsRef.current;
     if (!container) return;
     const handleScroll = () => {
-      const scrollTop = container.scrollTop;
       const reelHeight = container.clientHeight;
-      if (reelHeight > 0) {
-        setActiveReel(Math.round(scrollTop / reelHeight));
-      }
+      if (reelHeight > 0)
+        setActiveReel(Math.round(container.scrollTop / reelHeight));
     };
     container.addEventListener("scroll", handleScroll, { passive: true });
     return () => container.removeEventListener("scroll", handleScroll);
@@ -1136,7 +1073,7 @@ const WeatherStats: React.FC<{ statistics: WeatherStatistics }> = ({
           {reels.map((_, i) => (
             <div
               key={i}
-              className={`rdot ${i === activeReel ? "active" : ""}`}
+              className={`rdot ${i === activeReel ? "active" : "unactive"}`}
               onClick={() => scrollToReel(i)}
             >
               <span className="rdot-label">{reelLabels[i]}</span>
@@ -1155,11 +1092,10 @@ const WeatherStats: React.FC<{ statistics: WeatherStatistics }> = ({
         isOpen={packingOpen}
         onClose={() => setPackingOpen(false)}
         items={analysis.packingItems}
-        cityKorean={statistics.city_korean || statistics.city}
-        date={statistics.date}
+        cityKorean={cityKorean}
+        dateDisplay={dateDisplay}
       />
-
-      <YearlyDialog
+      <YearlyRangeDialog
         isOpen={yearlyOpen}
         onClose={() => setYearlyOpen(false)}
         statistics={statistics}
@@ -1168,4 +1104,4 @@ const WeatherStats: React.FC<{ statistics: WeatherStatistics }> = ({
   );
 };
 
-export default WeatherStats;
+export default WeatherStatsRange;

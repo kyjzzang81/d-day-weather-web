@@ -116,6 +116,12 @@ export interface WeatherStatistics {
       recentAvgTemp: number;
       olderAvgTemp: number;
       diff: number;
+      recentMaxTemp: number;
+      olderMaxTemp: number;
+      maxDiff: number;
+      recentMinTemp: number;
+      olderMinTemp: number;
+      minDiff: number;
     };
     hourlyAverages: HourlyAverage[];
   };

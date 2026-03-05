@@ -210,7 +210,7 @@ export const fetchWeatherStatistics = async (
     rainProbability: 0,
     snowProbability: 0,
     clearProbability: 0,
-    trend: { recentAvgTemp: 0, olderAvgTemp: 0, diff: 0 },
+    trend: { recentAvgTemp: 0, olderAvgTemp: 0, diff: 0, recentMaxTemp: 0, olderMaxTemp: 0, maxDiff: 0, recentMinTemp: 0, olderMinTemp: 0, minDiff: 0 },
     hourlyAverages: [],
   };
 
@@ -253,6 +253,22 @@ export const fetchWeatherStatistics = async (
   const recentAvgTemp =
     recentValid.length > 0
       ? recentValid.reduce((s, d) => s + d.tempAvg, 0) / recentValid.length
+      : 0;
+  const olderMaxTemp =
+    olderValid.length > 0
+      ? olderValid.reduce((s, d) => s + d.tempMax, 0) / olderValid.length
+      : 0;
+  const recentMaxTemp =
+    recentValid.length > 0
+      ? recentValid.reduce((s, d) => s + d.tempMax, 0) / recentValid.length
+      : 0;
+  const olderMinTemp =
+    olderValid.length > 0
+      ? olderValid.reduce((s, d) => s + d.tempMin, 0) / olderValid.length
+      : 0;
+  const recentMinTemp =
+    recentValid.length > 0
+      ? recentValid.reduce((s, d) => s + d.tempMin, 0) / recentValid.length
       : 0;
 
   // 시간대별 평균
@@ -392,12 +408,188 @@ export const fetchWeatherStatistics = async (
       rainProbability: (rainDayCount / totalYears) * 100,
       snowProbability: (snowDayCount / totalYears) * 100,
       clearProbability: (weatherFrequency.clear / totalYears) * 100,
-      trend: { recentAvgTemp, olderAvgTemp, diff: recentAvgTemp - olderAvgTemp },
+      trend: {
+        recentAvgTemp, olderAvgTemp, diff: recentAvgTemp - olderAvgTemp,
+        recentMaxTemp, olderMaxTemp, maxDiff: recentMaxTemp - olderMaxTemp,
+        recentMinTemp, olderMinTemp, minDiff: recentMinTemp - olderMinTemp,
+      },
       hourlyAverages,
     },
     yearlyData,
     nearbyDates: betterDates,
   };
+};
+
+// ─── 기간 분석 ───────────────────────────────────────────────────────────────
+
+/** 두 날짜 사이의 모든 월/일 목록 생성 (최대 14일) */
+function generateDateRange(
+  startMonth: number, startDay: number,
+  endMonth: number, endDay: number
+): Array<{ month: number; day: number }> {
+  const dates: Array<{ month: number; day: number }> = [];
+  const start = new Date(2024, startMonth - 1, startDay);
+  const end = new Date(2024, endMonth - 1, endDay);
+  if (end < start) return [{ month: startMonth, day: startDay }];
+  const current = new Date(start);
+  while (current <= end && dates.length < 14) {
+    dates.push({ month: current.getMonth() + 1, day: current.getDate() });
+    current.setDate(current.getDate() + 1);
+  }
+  return dates;
+}
+
+function avg(nums: number[]): number {
+  if (nums.length === 0) return 0;
+  return nums.reduce((a, b) => a + b, 0) / nums.length;
+}
+
+/** 여러 날의 WeatherStatistics를 하나로 합산 */
+function mergeWeatherStatistics(
+  list: WeatherStatistics[],
+  startMonth: number, startDay: number,
+  endMonth: number, endDay: number
+): WeatherStatistics {
+  const first = list[0];
+  const sts = list.map((s) => s.statistics);
+
+  // 시간대별 평균 통합 (hour별로 합산)
+  const hourMap = new Map<number, HourlyAverage[]>();
+  sts.forEach((s) => {
+    s.hourlyAverages.forEach((h) => {
+      if (!hourMap.has(h.hour)) hourMap.set(h.hour, []);
+      hourMap.get(h.hour)!.push(h);
+    });
+  });
+  const mergedHourly: HourlyAverage[] = [];
+  hourMap.forEach((hs, hour) => {
+    mergedHourly.push({
+      hour,
+      avgTemp: avg(hs.map((h) => h.avgTemp)),
+      avgApparentTemp: avg(hs.map((h) => h.avgApparentTemp)),
+      avgCloudCover: avg(hs.map((h) => h.avgCloudCover)),
+      dominantWeatherCode: getDominantCode(hs.map((h) => h.dominantWeatherCode)),
+      avgPrecipitation: avg(hs.map((h) => h.avgPrecipitation)),
+      isBestHour: false,
+    });
+  });
+  mergedHourly.sort((a, b) => a.hour - b.hour);
+  // 베스트 시간대 재계산
+  const dayHours = mergedHourly.filter((h) => h.hour >= 8 && h.hour <= 17);
+  if (dayHours.length > 0) {
+    const minCloud = Math.min(...dayHours.map((h) => h.avgCloudCover));
+    const maxTemp = Math.max(...dayHours.map((h) => h.avgTemp));
+    dayHours.forEach((h) => {
+      h.isBestHour = h.avgCloudCover <= minCloud + 15 && h.avgTemp >= maxTemp - 3;
+    });
+  }
+
+  // yearlyData: 연도별로 그룹 → 평균
+  const yearMap = new Map<number, YearlyDayData[]>();
+  list.forEach((s) => {
+    s.yearlyData.filter((d) => d.hours.length > 0).forEach((d) => {
+      if (!yearMap.has(d.year)) yearMap.set(d.year, []);
+      yearMap.get(d.year)!.push(d);
+    });
+  });
+  const mergedYearly: YearlyDayData[] = [];
+  yearMap.forEach((days, year) => {
+    mergedYearly.push({
+      year,
+      date: `${String(startMonth).padStart(2, '0')}-${String(startDay).padStart(2, '0')}`,
+      hours: [],
+      tempMax: avg(days.map((d) => d.tempMax)),
+      tempMin: avg(days.map((d) => d.tempMin)),
+      tempAvg: avg(days.map((d) => d.tempAvg)),
+      totalPrecipitation: avg(days.map((d) => d.totalPrecipitation)),
+      totalRain: avg(days.map((d) => d.totalRain)),
+      totalSnowfall: avg(days.map((d) => d.totalSnowfall)),
+      avgWindSpeed: avg(days.map((d) => d.avgWindSpeed)),
+      maxWindGust: Math.max(...days.map((d) => d.maxWindGust)),
+      avgApparentTemp: avg(days.map((d) => d.avgApparentTemp)),
+      dominantWeatherCode: getDominantCode(days.map((d) => d.dominantWeatherCode)),
+    });
+  });
+
+  const mm1 = String(startMonth).padStart(2, '0');
+  const dd1 = String(startDay).padStart(2, '0');
+  const mm2 = String(endMonth).padStart(2, '0');
+  const dd2 = String(endDay).padStart(2, '0');
+
+  return {
+    city: first.city,
+    city_korean: first.city_korean,
+    country: first.country,
+    date: `${mm1}-${dd1}~${mm2}-${dd2}`,
+    cityLat: first.cityLat,
+    cityLon: first.cityLon,
+    statistics: {
+      weatherFrequency: {
+        clear: avg(sts.map((s) => s.weatherFrequency.clear)),
+        cloudy: avg(sts.map((s) => s.weatherFrequency.cloudy)),
+        rain: avg(sts.map((s) => s.weatherFrequency.rain)),
+        snow: avg(sts.map((s) => s.weatherFrequency.snow)),
+      },
+      temperature: {
+        max: {
+          highest: Math.max(...sts.map((s) => s.temperature.max.highest)),
+          lowest: Math.min(...sts.map((s) => s.temperature.max.lowest)),
+          average: avg(sts.map((s) => s.temperature.max.average)),
+        },
+        min: {
+          highest: Math.max(...sts.map((s) => s.temperature.min.highest)),
+          lowest: Math.min(...sts.map((s) => s.temperature.min.lowest)),
+          average: avg(sts.map((s) => s.temperature.min.average)),
+        },
+        avg: {
+          highest: Math.max(...sts.map((s) => s.temperature.avg.highest)),
+          lowest: Math.min(...sts.map((s) => s.temperature.avg.lowest)),
+          average: avg(sts.map((s) => s.temperature.avg.average)),
+        },
+      },
+      humidity: {
+        highest: Math.max(...sts.map((s) => s.humidity.highest)),
+        lowest: Math.min(...sts.map((s) => s.humidity.lowest)),
+        average: avg(sts.map((s) => s.humidity.average)),
+      },
+      precipitation: {
+        highest: Math.max(...sts.map((s) => s.precipitation.highest)),
+        average: avg(sts.map((s) => s.precipitation.average)),
+      },
+      avgApparentTemp: avg(sts.map((s) => s.avgApparentTemp)),
+      avgWindSpeed: avg(sts.map((s) => s.avgWindSpeed)),
+      maxWindGust: Math.max(...sts.map((s) => s.maxWindGust)),
+      rainProbability: avg(sts.map((s) => s.rainProbability)),
+      snowProbability: avg(sts.map((s) => s.snowProbability)),
+      clearProbability: avg(sts.map((s) => s.clearProbability)),
+      trend: {
+        recentAvgTemp: avg(sts.map((s) => s.trend.recentAvgTemp)),
+        olderAvgTemp: avg(sts.map((s) => s.trend.olderAvgTemp)),
+        diff: avg(sts.map((s) => s.trend.diff)),
+        recentMaxTemp: avg(sts.map((s) => s.trend.recentMaxTemp)),
+        olderMaxTemp: avg(sts.map((s) => s.trend.olderMaxTemp)),
+        maxDiff: avg(sts.map((s) => s.trend.maxDiff)),
+        recentMinTemp: avg(sts.map((s) => s.trend.recentMinTemp)),
+        olderMinTemp: avg(sts.map((s) => s.trend.olderMinTemp)),
+        minDiff: avg(sts.map((s) => s.trend.minDiff)),
+      },
+      hourlyAverages: mergedHourly,
+    },
+    yearlyData: mergedYearly,
+    nearbyDates: [],
+  };
+}
+
+export const fetchDateRangeStatistics = async (
+  cityId: string,
+  startMonth: number, startDay: number,
+  endMonth: number, endDay: number,
+): Promise<WeatherStatistics> => {
+  const dates = generateDateRange(startMonth, startDay, endMonth, endDay);
+  const statsList = await Promise.all(
+    dates.map(({ month, day }) => fetchWeatherStatistics(cityId, month, day))
+  );
+  return mergeWeatherStatistics(statsList, startMonth, startDay, endMonth, endDay);
 };
 
 export const fetchCities = async (): Promise<City[]> => {

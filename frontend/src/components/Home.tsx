@@ -2,9 +2,14 @@ import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import { WeatherStatistics, City } from "../types/weather";
-import { fetchWeatherStatistics, fetchCities } from "../utils/weatherApi";
+import {
+  fetchWeatherStatistics,
+  fetchDateRangeStatistics,
+  fetchCities,
+} from "../utils/weatherApi";
 import { getSearchHistoryList, addSearchHistory } from "../utils/storage";
 import WeatherStats from "./WeatherStats";
+import WeatherStatsRange from "./WeatherStatsRange";
 
 const POPULAR_CITIES = [
   { id: "seoul", name: "서울", icon: "🇰🇷" },
@@ -17,29 +22,62 @@ const POPULAR_CITIES = [
   { id: "sydney", name: "시드니", icon: "🇦🇺" },
 ];
 
+type DateMode = "single" | "range";
+
 const Home: React.FC = () => {
   const [screen, setScreen] = useState<"home" | "detail">("home");
   const [searchOpen, setSearchOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [softUI, setSoftUI] = useState(() => {
-    return localStorage.getItem("theme") === "soft";
+  type ThemeMode = "default" | "soft" | "bold";
+  const [theme, setTheme] = useState<ThemeMode>(() => {
+    const stored = localStorage.getItem("theme");
+    if (stored === "soft" || stored === "bold") return stored;
+    return "default";
   });
-
   useEffect(() => {
-    if (softUI) {
-      document.documentElement.setAttribute("data-theme", "soft");
-      localStorage.setItem("theme", "soft");
+    if (theme === "soft" || theme === "bold") {
+      document.documentElement.setAttribute("data-theme", theme);
     } else {
       document.documentElement.removeAttribute("data-theme");
-      localStorage.setItem("theme", "default");
     }
-  }, [softUI]);
+    localStorage.setItem("theme", theme);
+  }, [theme]);
+
+  const cycleTheme = () => {
+    setTheme((t) =>
+      t === "default" ? "soft" : t === "soft" ? "bold" : "default",
+    );
+  };
 
   const [cities, setCities] = useState<City[]>([]);
   const [searchInput, setSearchInput] = useState("");
   const [selectedCityId, setSelectedCityId] = useState("seoul");
+
+  // 날짜 모드
+  const [dateMode, setDateMode] = useState<DateMode>("single");
+
+  // 단일 날짜
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedDay, setSelectedDay] = useState(new Date().getDate());
+
+  // 기간 날짜
+  const [rangeStartMonth, setRangeStartMonth] = useState(
+    new Date().getMonth() + 1,
+  );
+  const [rangeStartDay, setRangeStartDay] = useState(new Date().getDate());
+  const [rangeEndMonth, setRangeEndMonth] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 3);
+    return d.getMonth() + 1;
+  });
+  const [rangeEndDay, setRangeEndDay] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 3);
+    return d.getDate();
+  });
+
+  // 네비 표시용 날짜 문자열
+  const [navDateStr, setNavDateStr] = useState("");
 
   const [statistics, setStatistics] = useState<WeatherStatistics | null>(null);
   const [loading, setLoading] = useState(false);
@@ -49,14 +87,11 @@ const Home: React.FC = () => {
     fetchCities().then(setCities).catch(console.error);
   }, []);
 
-  const loadAndShowDetail = async (
-    city: string,
-    month: number,
-    day: number,
-  ) => {
+  const loadSingle = async (city: string, month: number, day: number) => {
     setLoading(true);
     setError(null);
     setScreen("detail");
+    setNavDateStr(`${month}월 ${day}일`);
     try {
       const data = await fetchWeatherStatistics(city, month, day);
       setStatistics(data);
@@ -82,9 +117,41 @@ const Home: React.FC = () => {
     }
   };
 
+  const loadRange = async (
+    city: string,
+    sm: number,
+    sd: number,
+    em: number,
+    ed: number,
+  ) => {
+    setLoading(true);
+    setError(null);
+    setScreen("detail");
+    setNavDateStr(`${sm}월 ${sd}일 ~ ${em}월 ${ed}일`);
+    try {
+      const data = await fetchDateRangeStatistics(city, sm, sd, em, ed);
+      setStatistics(data);
+    } catch (err) {
+      console.error(err);
+      setError("날씨 데이터를 불러오는데 실패했습니다.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSearch = () => {
     setSearchOpen(false);
-    loadAndShowDetail(selectedCityId, selectedMonth, selectedDay);
+    if (dateMode === "single") {
+      loadSingle(selectedCityId, selectedMonth, selectedDay);
+    } else {
+      loadRange(
+        selectedCityId,
+        rangeStartMonth,
+        rangeStartDay,
+        rangeEndMonth,
+        rangeEndDay,
+      );
+    }
   };
 
   const openSearch = () => {
@@ -131,17 +198,51 @@ const Home: React.FC = () => {
     setSelectedCityId(city);
     setSelectedMonth(month);
     setSelectedDay(day);
-    loadAndShowDetail(city, month, day);
+    setDateMode("single");
+    loadSingle(city, month, day);
   };
 
-  const daysInMonth = new Date(2026, selectedMonth, 0).getDate();
-  const filteredCities = searchInput.trim()
-    ? cities.filter(
-        (c) =>
-          c.nameKo.toLowerCase().includes(searchInput.toLowerCase()) ||
-          c.name.toLowerCase().includes(searchInput.toLowerCase()),
-      )
-    : [];
+  const daysInMonth = (m: number) => new Date(2024, m, 0).getDate();
+
+  // 기간 선택 시 종료일이 시작일보다 앞서지 않도록 보정
+  const handleRangeStartChange = (month: number, day: number) => {
+    setRangeStartMonth(month);
+    setRangeStartDay(day);
+    const start = new Date(2024, month - 1, day);
+    const end = new Date(2024, rangeEndMonth - 1, rangeEndDay);
+    if (end <= start) {
+      const next = new Date(start);
+      next.setDate(next.getDate() + 1);
+      setRangeEndMonth(next.getMonth() + 1);
+      setRangeEndDay(next.getDate());
+    }
+  };
+
+  const handleRangeEndChange = (month: number, day: number) => {
+    const start = new Date(2024, rangeStartMonth - 1, rangeStartDay);
+    const end = new Date(2024, month - 1, day);
+    if (end <= start) return;
+    // 최대 14일 제한
+    const diffDays = Math.round((end.getTime() - start.getTime()) / 86400000);
+    if (diffDays > 13) {
+      const maxEnd = new Date(start);
+      maxEnd.setDate(maxEnd.getDate() + 13);
+      setRangeEndMonth(maxEnd.getMonth() + 1);
+      setRangeEndDay(maxEnd.getDate());
+    } else {
+      setRangeEndMonth(month);
+      setRangeEndDay(day);
+    }
+  };
+
+  const rangeNights = (() => {
+    const start = new Date(2024, rangeStartMonth - 1, rangeStartDay);
+    const end = new Date(2024, rangeEndMonth - 1, rangeEndDay);
+    return Math.max(
+      1,
+      Math.round((end.getTime() - start.getTime()) / 86400000),
+    );
+  })();
 
   const cityKorean = statistics?.city_korean ?? "—";
   const totalYears = statistics
@@ -191,10 +292,16 @@ const Home: React.FC = () => {
         </div>
         <button
           className="theme-toggle-btn"
-          onClick={() => setSoftUI((v) => !v)}
-          title={softUI ? "기본 UI로 전환" : "Soft UI로 전환"}
+          onClick={cycleTheme}
+          title={
+            theme === "default"
+              ? "뉴모피즘 UI로 전환"
+              : theme === "soft"
+                ? "볼드 UI로 전환"
+                : "기본 UI로 전환"
+          }
         >
-          {softUI ? "🎨" : "🫧"}
+          {theme === "default" ? "🫧" : theme === "soft" ? "🎨" : "✦"}
         </button>
       </div>
 
@@ -208,26 +315,14 @@ const Home: React.FC = () => {
           </div>
           <div className="home-inner">
             <div className="home-logo">
-              D-Day Weather
-              <span style={{ fontSize: 20, fontWeight: 400, display: "block" }}>
-                그날의 날씨
-              </span>
+              그날의 날씨 | 예보로 볼 수 없는 날짜 날씨 과거 기록 보기
             </div>
 
             <div className="home-hero">
-              <div className="home-eyebrow">예보가 없는 날짜도</div>
+              <div className="home-eyebrow"></div>
               <h1 className="home-headline">
-                언제 가야
-                <br />
-                <em>좋을까요?</em>
+                <em>어디</em>를 가고 싶으세요?
               </h1>
-              <p className="home-sub">
-                86년치 기후 데이터로 분석한
-                <br />
-                여행 날씨 가이드. 7일 이후의
-                <br />
-                날짜를 지금 미리 알아보세요.
-              </p>
 
               <div className="home-chips">
                 {POPULAR_CITIES.slice(0, 6).map((c) => (
@@ -252,7 +347,6 @@ const Home: React.FC = () => {
       {/* ═══ DETAIL SCREEN ═══ */}
       {screen === "detail" && (
         <div className="detail-screen">
-          {/* 상단 네비 */}
           <div className="detail-nav">
             <button className="nav-back" onClick={goHome}>
               ←
@@ -262,7 +356,7 @@ const Home: React.FC = () => {
                 📍 {loading ? "..." : cityKorean}
               </div>
               <div className="nav-date-str">
-                {selectedMonth}월 {selectedDay}일
+                {navDateStr || `${selectedMonth}월 ${selectedDay}일`}
                 {totalYears > 0 ? ` · ${totalYears}년 기후 기준` : ""}
               </div>
             </div>
@@ -271,7 +365,6 @@ const Home: React.FC = () => {
             </button>
           </div>
 
-          {/* 로딩 */}
           {loading && (
             <div className="loading-wrap">
               <DotLottieReact
@@ -293,7 +386,6 @@ const Home: React.FC = () => {
             </div>
           )}
 
-          {/* 에러 */}
           {error && !loading && (
             <div style={{ padding: "24px 20px" }}>
               <div
@@ -302,7 +394,7 @@ const Home: React.FC = () => {
                   border: "1px solid rgba(240,96,128,0.2)",
                   borderRadius: 16,
                   padding: "18px 20px",
-                  color: "var(--c-acc4)",
+                  color: "var(--c-negative)",
                   fontSize: 14,
                 }}
               >
@@ -311,33 +403,18 @@ const Home: React.FC = () => {
             </div>
           )}
 
-          {/* 날씨 상세 슬라이더 */}
-          {!loading && !error && statistics && (
-            <WeatherStats statistics={statistics} />
-          )}
-
-          {/* 푸터 */}
-          {!loading && (
-            <div className="footer">
-              <p>
-                데이터 출처:{" "}
-                <a
-                  href="https://open-meteo.com/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Open-Meteo
-                </a>
-              </p>
-              {/* <p style={{ marginTop: 4 }}>
-                1940-2025년 시간별 날씨 데이터 기반
-              </p> */}
-            </div>
-          )}
+          {!loading &&
+            !error &&
+            statistics &&
+            (statistics.date.includes("~") ? (
+              <WeatherStatsRange statistics={statistics} />
+            ) : (
+              <WeatherStats statistics={statistics} />
+            ))}
         </div>
       )}
 
-      {/* ═══ SEARCH OVERLAY (portal) ═══ */}
+      {/* ═══ SEARCH OVERLAY ═══ */}
       {searchOpen &&
         createPortal(
           <div
@@ -365,61 +442,179 @@ const Home: React.FC = () => {
               </div>
 
               {/* 검색 결과 */}
-              {filteredCities.length > 0 && (
+              {filteredCities(cities, searchInput).length > 0 && (
                 <div className="city-results">
-                  {filteredCities.slice(0, 8).map((city) => (
-                    <button
-                      key={city.id}
-                      className={`city-result ${city.id === selectedCityId ? "selected" : ""}`}
-                      onClick={() => selectCity(city.id)}
-                    >
-                      <div className="city-result-name">
-                        {city.nameKo} {city.id === selectedCityId && "✦"}
-                      </div>
-                      <div className="city-result-sub">
-                        {city.name}, {city.country}
-                      </div>
-                    </button>
-                  ))}
+                  {filteredCities(cities, searchInput)
+                    .slice(0, 8)
+                    .map((city) => (
+                      <button
+                        key={city.id}
+                        className={`city-result ${city.id === selectedCityId ? "selected" : ""}`}
+                        onClick={() => selectCity(city.id)}
+                      >
+                        <div className="city-result-name">
+                          {city.nameKo} {city.id === selectedCityId && "✦"}
+                        </div>
+                        <div className="city-result-sub">
+                          {city.name}, {city.country}
+                        </div>
+                      </button>
+                    ))}
                 </div>
               )}
 
-              {/* 날짜 선택 */}
-              <div className="date-row">
-                <div className="date-btn">
-                  <div className="date-label">Month</div>
-                  <select
-                    className="date-select"
-                    value={selectedMonth}
-                    onChange={(e) => {
-                      const m = Number(e.target.value);
-                      setSelectedMonth(m);
-                      const maxD = new Date(2026, m, 0).getDate();
-                      if (selectedDay > maxD) setSelectedDay(maxD);
-                    }}
-                  >
-                    {Array.from({ length: 12 }, (_, i) => (
-                      <option key={i + 1} value={i + 1}>
-                        {i + 1}월
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="date-btn">
-                  <div className="date-label">Day</div>
-                  <select
-                    className="date-select"
-                    value={selectedDay}
-                    onChange={(e) => setSelectedDay(Number(e.target.value))}
-                  >
-                    {Array.from({ length: daysInMonth }, (_, i) => (
-                      <option key={i + 1} value={i + 1}>
-                        {i + 1}일
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              {/* 날짜 / 기간 토글 */}
+              <div className="date-mode-toggle">
+                <button
+                  className={`dmt-btn ${dateMode === "single" ? "active" : ""}`}
+                  onClick={() => setDateMode("single")}
+                >
+                  날짜
+                </button>
+                <button
+                  className={`dmt-btn ${dateMode === "range" ? "active" : ""}`}
+                  onClick={() => setDateMode("range")}
+                >
+                  기간
+                </button>
               </div>
+
+              {/* 단일 날짜 선택 */}
+              {dateMode === "single" && (
+                <div className="date-row">
+                  <div className="date-btn">
+                    <div className="date-label">Month</div>
+                    <select
+                      className="date-select"
+                      value={selectedMonth}
+                      onChange={(e) => {
+                        const m = Number(e.target.value);
+                        setSelectedMonth(m);
+                        if (selectedDay > daysInMonth(m))
+                          setSelectedDay(daysInMonth(m));
+                      }}
+                    >
+                      {Array.from({ length: 12 }, (_, i) => (
+                        <option key={i + 1} value={i + 1}>
+                          {i + 1}월
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="date-btn">
+                    <div className="date-label">Day</div>
+                    <select
+                      className="date-select"
+                      value={selectedDay}
+                      onChange={(e) => setSelectedDay(Number(e.target.value))}
+                    >
+                      {Array.from(
+                        { length: daysInMonth(selectedMonth) },
+                        (_, i) => (
+                          <option key={i + 1} value={i + 1}>
+                            {i + 1}일
+                          </option>
+                        ),
+                      )}
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {/* 기간 선택 */}
+              {dateMode === "range" && (
+                <div className="date-range-section">
+                  <div className="date-range-row">
+                    {/* 시작일 */}
+                    <div className="date-range-block">
+                      <div className="drb-label">시작일</div>
+                      <div className="drb-selects">
+                        <select
+                          className="date-select date-select-sm"
+                          value={rangeStartMonth}
+                          onChange={(e) => {
+                            const m = Number(e.target.value);
+                            const d = Math.min(rangeStartDay, daysInMonth(m));
+                            handleRangeStartChange(m, d);
+                          }}
+                        >
+                          {Array.from({ length: 12 }, (_, i) => (
+                            <option key={i + 1} value={i + 1}>
+                              {i + 1}월
+                            </option>
+                          ))}
+                        </select>
+                        <select
+                          className="date-select date-select-sm"
+                          value={rangeStartDay}
+                          onChange={(e) =>
+                            handleRangeStartChange(
+                              rangeStartMonth,
+                              Number(e.target.value),
+                            )
+                          }
+                        >
+                          {Array.from(
+                            { length: daysInMonth(rangeStartMonth) },
+                            (_, i) => (
+                              <option key={i + 1} value={i + 1}>
+                                {i + 1}일
+                              </option>
+                            ),
+                          )}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="drb-arrow">→</div>
+
+                    {/* 종료일 */}
+                    <div className="date-range-block">
+                      <div className="drb-label">종료일</div>
+                      <div className="drb-selects">
+                        <select
+                          className="date-select date-select-sm"
+                          value={rangeEndMonth}
+                          onChange={(e) => {
+                            const m = Number(e.target.value);
+                            const d = Math.min(rangeEndDay, daysInMonth(m));
+                            handleRangeEndChange(m, d);
+                          }}
+                        >
+                          {Array.from({ length: 12 }, (_, i) => (
+                            <option key={i + 1} value={i + 1}>
+                              {i + 1}월
+                            </option>
+                          ))}
+                        </select>
+                        <select
+                          className="date-select date-select-sm"
+                          value={rangeEndDay}
+                          onChange={(e) =>
+                            handleRangeEndChange(
+                              rangeEndMonth,
+                              Number(e.target.value),
+                            )
+                          }
+                        >
+                          {Array.from(
+                            { length: daysInMonth(rangeEndMonth) },
+                            (_, i) => (
+                              <option key={i + 1} value={i + 1}>
+                                {i + 1}일
+                              </option>
+                            ),
+                          )}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="range-nights-badge">
+                    📅 {rangeNights}박 {rangeNights + 1}일 · 최대 14일
+                  </div>
+                </div>
+              )}
 
               {/* 인기 도시 */}
               <div className="popular-label">인기 도시</div>
@@ -436,7 +631,6 @@ const Home: React.FC = () => {
                 ))}
               </div>
 
-              {/* CTA */}
               <button
                 className="search-go"
                 style={{ marginTop: 16 }}
@@ -458,5 +652,14 @@ const Home: React.FC = () => {
     </div>
   );
 };
+
+function filteredCities(cities: City[], input: string): City[] {
+  if (!input.trim()) return [];
+  return cities.filter(
+    (c) =>
+      c.nameKo.toLowerCase().includes(input.toLowerCase()) ||
+      c.name.toLowerCase().includes(input.toLowerCase()),
+  );
+}
 
 export default Home;
