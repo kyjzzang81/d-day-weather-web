@@ -63,3 +63,6 @@ frontend/public/logo.png
 
 # Xcode 자동 생성 파일
 **/xcshareddata/swiftpm/
+
+# @capacitor/assets 자동 생성 (public/icons/로 복사해서 사용)
+frontend/icons/
