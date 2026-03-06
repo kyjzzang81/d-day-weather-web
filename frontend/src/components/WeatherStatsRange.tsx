@@ -192,11 +192,83 @@ function parseDateRange(date: string): {
   return { startStr: `${sm}월 ${sd}일`, endStr: `${em}월 ${ed}일`, nights };
 }
 
+// ─── Reel 1 도움말 데이터 (WeatherStats와 공유) ───────────────────────────────
+type StatHelpKey = "wind" | "humidity" | "rain" | null;
+const STAT_HELP: Record<
+  Exclude<StatHelpKey, null>,
+  { title: string; rows: { val: string; desc: string }[] }
+> = {
+  wind: {
+    title: "바람 세기 기준",
+    rows: [
+      { val: "0 ~ 10km/h", desc: "잔잔함 — 야외 활동에 이상적" },
+      { val: "10 ~ 20km/h", desc: "약한 바람 — 체감온도 약간 낮아짐" },
+      { val: "20 ~ 30km/h", desc: "보통 바람 — 우산 뒤집힐 수 있음" },
+      { val: "30 ~ 50km/h", desc: "강한 바람 — 외출 시 주의" },
+      { val: "50km/h 이상", desc: "강풍 — 야외 활동 위험" },
+    ],
+  },
+  humidity: {
+    title: "습도 기준",
+    rows: [
+      { val: "40% 미만", desc: "건조 — 피부·호흡기 자극 가능" },
+      { val: "40 ~ 60%", desc: "쾌적 — 가장 이상적인 범위" },
+      { val: "60 ~ 75%", desc: "약간 습함 — 불쾌감 시작" },
+      { val: "75% 이상", desc: "매우 습함 — 체감온도 높아짐" },
+    ],
+  },
+  rain: {
+    title: "강수 확률 기준",
+    rows: [
+      { val: "0 ~ 20%", desc: "거의 없음 — 우산 불필요" },
+      { val: "20 ~ 40%", desc: "낮음 — 접이식 우산 대비" },
+      { val: "40 ~ 60%", desc: "보통 — 우산 챙기기 권장" },
+      { val: "60 ~ 80%", desc: "높음 — 우산 필수" },
+      { val: "80% 이상", desc: "매우 높음 — 강수 가능성 큼" },
+    ],
+  },
+};
+
+// ─── 공용 도움말 다이얼로그 (PackingDialog와 동일 스타일) ───────────────────
+const HelpDialog: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  rows: { val: string; desc: string }[];
+}> = ({ isOpen, onClose, title, rows }) => {
+  if (!isOpen) return null;
+  return createPortal(
+    <div
+      className="overlay open"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="dialog">
+        <div className="dlg-handle" />
+        <div className="dlg-title">{title}</div>
+        <div className="help-dlg-rows">
+          {rows.map((r) => (
+            <div key={r.val} className="help-dlg-row">
+              <span className="help-dlg-val">{r.val}</span>
+              <span className="help-dlg-desc">{r.desc}</span>
+            </div>
+          ))}
+        </div>
+        <button className="dlg-close" onClick={onClose}>닫기</button>
+      </div>
+    </div>,
+    document.body,
+  );
+};
+
 // ─── Reel 1: 날씨 요약 (날짜 버전과 구조 통일 + 기간 컨텍스트 추가) ──────────
 const RangeReel1: React.FC<{
   statistics: WeatherStatistics;
   analysis: WeatherAnalysis;
 }> = ({ statistics, analysis }) => {
+  const [openHelp, setOpenHelp] = useState<StatHelpKey>(null);
+  const toggleHelp = (key: Exclude<StatHelpKey, null>) =>
+    setOpenHelp((prev) => (prev === key ? null : key));
+
   const s = statistics.statistics;
   const ha = s.hourlyAverages;
   const cityName = statistics.city_korean || statistics.city;
@@ -233,7 +305,17 @@ const RangeReel1: React.FC<{
 
   return (
     <div className="reel-content">
-      {/* 내러티브 타이틀 (날짜 버전과 동일 구조) */}
+      {/* Lottie (날짜형과 동일: 맨 위) */}
+      <div className="s1-illust">
+        <DotLottieReact
+          src={getWeatherLottie(s)}
+          loop
+          autoplay
+          style={{ width: 200, height: 200 }}
+        />
+      </div>
+
+      {/* 내러티브 타이틀 + 요약 영역 (로티 하단) */}
       <div className="slide-title s1-narrative" style={{ fontSize: 22 }}>
         {title.split("\n").map((line, i) => (
           <React.Fragment key={i}>
@@ -252,54 +334,6 @@ const RangeReel1: React.FC<{
         <span className="rpb-nights">
           {nights}박 {nights + 1}일
         </span>
-      </div>
-
-      {/* Lottie */}
-      <div className="s1-illust">
-        <DotLottieReact
-          src={getWeatherLottie(s)}
-          loop
-          autoplay
-          style={{ width: 200, height: 200 }}
-        />
-      </div>
-
-      {/* 시간대별 날씨 row (날짜 버전과 동일 구조) */}
-      {ha.length > 0 && (
-        <div className="s1-tl-row">
-          {[
-            { label: "오전", p: morning },
-            { label: "오후", p: afternoon },
-            { label: "저녁", p: evening },
-          ].map(({ label, p }) => (
-            <div key={label} className="s1-tl-cell">
-              <DotLottieReact
-                src={p.lottie}
-                loop
-                autoplay
-                style={{ width: 32, height: 32 }}
-              />
-              <div className="s1-tl-temp">{p.temp}°</div>
-              <div className="s1-tl-label">{label}</div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* 통계 row (바람/습도/강수확률 — 날짜 버전과 동일) */}
-      <div className="s1-stats">
-        <div className="s1-stat">
-          <div className="s1-stat-val">{Math.round(s.avgWindSpeed)}km/h</div>
-          <div className="s1-stat-key">바람</div>
-        </div>
-        <div className="s1-stat">
-          <div className="s1-stat-val">{Math.round(s.humidity.average)}%</div>
-          <div className="s1-stat-key">습도</div>
-        </div>
-        <div className="s1-stat">
-          <div className="s1-stat-val">{Math.round(s.rainProbability)}%</div>
-          <div className="s1-stat-key">강수확률</div>
-        </div>
       </div>
 
       {/* 여행 적합도 verdict */}
@@ -329,6 +363,62 @@ const RangeReel1: React.FC<{
       >
         <BoldText text={analysis.summaryText} />
       </div>
+
+      {/* 시간대별 날씨 row (날짜 버전과 동일 구조) */}
+      {ha.length > 0 && (
+        <div className="s1-tl-row">
+          {[
+            { label: "오전", p: morning },
+            { label: "오후", p: afternoon },
+            { label: "저녁", p: evening },
+          ].map(({ label, p }) => (
+            <div key={label} className="s1-tl-cell">
+              <DotLottieReact
+                src={p.lottie}
+                loop
+                autoplay
+                style={{ width: 32, height: 32 }}
+              />
+              <div className="s1-tl-temp">{p.temp}°</div>
+              <div className="s1-tl-label">{label}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* 통계 row (바람/습도/강수확률 — 날짜 버전과 동일) */}
+      <div className="s1-stats">
+        {(
+          [
+            { key: "wind" as const, val: `${Math.round(s.avgWindSpeed)}km/h`, label: "바람" },
+            { key: "humidity" as const, val: `${Math.round(s.humidity.average)}%`, label: "습도" },
+            { key: "rain" as const, val: `${Math.round(s.rainProbability)}%`, label: "강수확률" },
+          ] as const
+        ).map(({ key, val, label }) => (
+          <div key={key} className="s1-stat">
+            <div className="s1-stat-val">{val}</div>
+            <div className="s1-stat-key-row">
+              <span className="s1-stat-key">{label}</span>
+              <button
+                className="stat-help-btn"
+                onClick={() => toggleHelp(key)}
+                aria-label={`${label} 도움말`}
+              >
+                ⓘ
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {openHelp && (
+        <HelpDialog
+          isOpen={true}
+          onClose={() => setOpenHelp(null)}
+          title={STAT_HELP[openHelp].title}
+          rows={STAT_HELP[openHelp].rows}
+        />
+      )}
     </div>
   );
 };
@@ -570,31 +660,18 @@ const RangeReel3Precip: React.FC<{
               {impact.label}
             </span>
           </div>
-          {showPrecipHelp && (
-            <div className="precip-help-panel">
-              <div className="php-title">강수량 기준 안내</div>
-              <div className="php-row">
-                <span className="php-val">1mm 미만</span>
-                <span className="php-desc">거의 없음 — 우산 불필요</span>
-              </div>
-              <div className="php-row">
-                <span className="php-val">1 ~ 5mm</span>
-                <span className="php-desc">가벼운 비 — 접이식 우산</span>
-              </div>
-              <div className="php-row">
-                <span className="php-val">5 ~ 15mm</span>
-                <span className="php-desc">보통 비 — 우산 필수</span>
-              </div>
-              <div className="php-row">
-                <span className="php-val">15 ~ 30mm</span>
-                <span className="php-desc">다소 많음 — 방수 신발 추천</span>
-              </div>
-              <div className="php-row">
-                <span className="php-val">30mm 이상</span>
-                <span className="php-desc">많은 비 — 방수 장비 필수</span>
-              </div>
-            </div>
-          )}
+          <HelpDialog
+            isOpen={showPrecipHelp}
+            onClose={() => setShowPrecipHelp(false)}
+            title="💧 강수량 기준 안내"
+            rows={[
+              { val: "1mm 미만",  desc: "거의 없음 — 우산 불필요" },
+              { val: "1 ~ 5mm",   desc: "가벼운 비 — 접이식 우산" },
+              { val: "5 ~ 15mm",  desc: "보통 비 — 우산 필수" },
+              { val: "15 ~ 30mm", desc: "다소 많음 — 방수 신발 추천" },
+              { val: "30mm 이상", desc: "많은 비 — 방수 장비 필수" },
+            ]}
+          />
           <div className="precip-row">
             <div className="precip-box">
               <div className="precip-num">

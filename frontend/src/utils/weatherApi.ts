@@ -610,6 +610,56 @@ export const fetchCities = async (): Promise<City[]> => {
   }));
 };
 
+// ─── 홈 캐러셀 카드 ────────────────────────────────────────────────────────────
+
+const HOME_CARD_BUCKET = 'cities_images';
+
+/** Storage 경로(파일명)를 public URL로 변환. 이미 http로 시작하면 그대로 사용 */
+const resolveImageUrl = (path: string | null): string | null => {
+  if (!path) return null;
+  if (path.startsWith('http')) return path;
+  const { data } = supabase.storage.from(HOME_CARD_BUCKET).getPublicUrl(path);
+  return data.publicUrl;
+};
+
+export interface HomeCard {
+  id: number;
+  title: string;
+  subtitle: string | null;
+  nightsLabel: string | null;
+  dateLabel: string | null;
+  imageUrl: string | null;
+  cityId: string | null;
+  cardType: 'date' | 'range';
+  dateFrom: string | null; // MM-DD
+  dateTo: string | null;   // MM-DD, range일 때만
+  sortOrder: number;
+}
+
+export const fetchHomeCards = async (): Promise<HomeCard[]> => {
+  const { data, error } = await supabase
+    .from('home_cards')
+    .select('id, title, subtitle, nights_label, date_label, image_url, city_id, card_type, date_from, date_to, sort_order')
+    .eq('is_active', true)
+    .order('sort_order');
+
+  if (error || !data) return [];
+
+  return data.map((c) => ({
+    id: c.id,
+    title: c.title,
+    subtitle: c.subtitle ?? null,
+    nightsLabel: c.nights_label ?? null,
+    dateLabel: c.date_label ?? null,
+    imageUrl: resolveImageUrl(c.image_url),
+    cityId: c.city_id ?? null,
+    cardType: c.card_type as 'date' | 'range',
+    dateFrom: c.date_from ?? null,
+    dateTo: c.date_to ?? null,
+    sortOrder: c.sort_order,
+  }));
+};
+
 export const submitContact = async (
   email: string,
   message: string

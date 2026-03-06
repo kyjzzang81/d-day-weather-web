@@ -6,20 +6,20 @@ import {
   fetchWeatherStatistics,
   fetchDateRangeStatistics,
   fetchCities,
+  fetchHomeCards,
+  HomeCard,
 } from "../utils/weatherApi";
 import { getSearchHistoryList, addSearchHistory } from "../utils/storage";
 import WeatherStats from "./WeatherStats";
 import WeatherStatsRange from "./WeatherStatsRange";
 
 const POPULAR_CITIES = [
-  { id: "seoul", name: "서울", icon: "🇰🇷" },
+  { id: "jeju", name: "제주", icon: "🇰🇷" },
   { id: "tokyo", name: "도쿄", icon: "🇯🇵" },
+  { id: "da-nang", name: "다낭", icon: "🇻🇳" },
   { id: "bangkok", name: "방콕", icon: "🇹🇭" },
+  { id: "los-angeles", name: "LA", icon: "🇺🇸" },
   { id: "paris", name: "파리", icon: "🇫🇷" },
-  { id: "new_york", name: "뉴욕", icon: "🇺🇸" },
-  { id: "london", name: "런던", icon: "🇬🇧" },
-  { id: "bali", name: "발리", icon: "🇮🇩" },
-  { id: "sydney", name: "시드니", icon: "🇦🇺" },
 ];
 
 type DateMode = "single" | "range";
@@ -176,6 +176,11 @@ const Home: React.FC = () => {
     setStatistics(null);
   };
 
+  const [homeCards, setHomeCards] = useState<HomeCard[]>([]);
+  useEffect(() => {
+    fetchHomeCards().then(setHomeCards);
+  }, []);
+
   const historyList = getSearchHistoryList();
   const historyRef = useRef<HTMLDivElement>(null);
 
@@ -308,24 +313,42 @@ const Home: React.FC = () => {
       {/* ═══ HOME SCREEN ═══ */}
       {screen === "home" && (
         <div className="home-screen">
-          <div className="home-bg">
-            <div className="home-bg-orb orb1" />
-            <div className="home-bg-orb orb2" />
-            <div className="home-bg-orb orb3" />
-          </div>
           <div className="home-inner">
-            <div className="home-logo">
-              그날의 날씨 | 예보로 볼 수 없는 날짜 날씨 과거 기록 보기
+            {/* ── 로고 + 태양 ── */}
+            <div className="home-top-row">
+              <div className="home-logo-block">
+                <div className="home-logo-brand">
+                  <img
+                    src="/public/logo.png"
+                    alt="logo"
+                    className="home-logo-img"
+                  />
+                </div>
+                <div className="home-logo-sub">
+                  예보로 볼 수 없는 날짜 날씨 과거 기록 보기
+                </div>
+              </div>
+              <div className="home-sun-lottie">
+                <DotLottieReact
+                  src="/weather-sunny.lottie"
+                  loop
+                  autoplay
+                  style={{ width: 300, height: 300 }}
+                />
+              </div>
             </div>
 
-            <div className="home-hero">
-              <div className="home-eyebrow"></div>
+            <div className="home-content-wrap">
+              {/* ── 헤드라인 ── */}
               <h1 className="home-headline">
-                <em>어디</em>를 가고 싶으세요?
+                Discover the
+                <br />
+                Best Day to Travel
               </h1>
 
+              {/* ── 도시 칩 + 다른 도시 찾기 ── */}
               <div className="home-chips">
-                {POPULAR_CITIES.slice(0, 6).map((c) => (
+                {POPULAR_CITIES.map((c) => (
                   <span
                     key={c.id}
                     className="chip"
@@ -334,12 +357,71 @@ const Home: React.FC = () => {
                     {c.icon} {c.name}
                   </span>
                 ))}
+                <button className="chip chip-find-more" onClick={openSearch}>
+                  🔍 다른 도시로 찾기
+                </button>
               </div>
-
-              <button className="home-cta" onClick={openSearch}>
-                🔍 도시와 날짜 검색하기
-              </button>
             </div>
+
+            {/* ── 기획 콘텐츠 캐러셀 ── */}
+            {homeCards.length > 0 && (
+              <div className="home-carousel-wrap">
+                <div className="home-carousel-title">
+                  <h2 className="home-carousel-title-text">
+                    <span className="hct-uw">
+                      <span className="hct-inner">🗽 그날의 날씨 PICK!</span>
+                    </span>
+                  </h2>
+                </div>
+                <div className="home-carousel">
+                  {homeCards.map((card) => {
+                    const handleCardClick = () => {
+                      if (!card.cityId || !card.dateFrom) return;
+                      if (card.cardType === "range" && card.dateTo) {
+                        const [sm, sd] = card.dateFrom.split("-").map(Number);
+                        const [em, ed] = card.dateTo.split("-").map(Number);
+                        loadRange(card.cityId, sm, sd, em, ed);
+                      } else {
+                        const [m, d] = card.dateFrom.split("-").map(Number);
+                        loadSingle(card.cityId, m, d);
+                      }
+                    };
+                    return (
+                      <div
+                        key={card.id}
+                        className="hc-card"
+                        onClick={handleCardClick}
+                      >
+                        <div
+                          className="hc-img"
+                          style={
+                            card.imageUrl
+                              ? { backgroundImage: `url(${card.imageUrl})` }
+                              : undefined
+                          }
+                        />
+                        <div className="hc-info">
+                          <div className="hc-city-row">
+                            <span className="hc-city">{card.title}</span>
+                            {card.nightsLabel && (
+                              <span className="hc-nights">
+                                {card.nightsLabel}
+                              </span>
+                            )}
+                          </div>
+                          {card.subtitle && (
+                            <div className="hc-subtitle">{card.subtitle}</div>
+                          )}
+                          {card.dateLabel && (
+                            <div className="hc-date">{card.dateLabel}</div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
