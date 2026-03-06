@@ -2672,35 +2672,6 @@ body {
   background: var(--c-card);
   box-shadow: var(--neu-raised-lg);
 }
-.theme-toggle-btn {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  border: none;
-  cursor: pointer;
-  font-size: 1.125rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  background: var(--c-card);
-  box-shadow: var(--card-sh);
-  color: var(--c-dim);
-}
-.theme-toggle-btn:hover {
-  transform: scale(1.08);
-}
-.theme-toggle-btn:active {
-  transform: scale(0.95);
-}
-
-[data-theme="soft"] .theme-toggle-btn {
-  box-shadow: var(--neu-raised);
-}
-[data-theme="soft"] .theme-toggle-btn:active {
-  box-shadow: var(--neu-inset);
-  transform: scale(0.95);
-}
 
 /* ── HOME SCREEN ──────────────────────────────────────────────────────── */
 [data-theme="soft"] .home-screen {
@@ -3522,13 +3493,7 @@ body {
   padding: 0.5rem 1rem;
 }
 [data-theme="bold"] .history-btn,
-[data-theme="bold"] .theme-toggle-btn {
-  border-radius: 8px;
-  border: 1.5px solid var(--c-line);
-  background: var(--c-card);
-}
-[data-theme="bold"] .history-btn:hover,
-[data-theme="bold"] .theme-toggle-btn:hover {
+[data-theme="bold"] .history-btn:hover {
   border-color: var(--c-primary);
   color: var(--c-primary);
   background: var(--c-surf);

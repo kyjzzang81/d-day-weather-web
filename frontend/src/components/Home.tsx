@@ -28,26 +28,6 @@ const Home: React.FC = () => {
   const [screen, setScreen] = useState<"home" | "detail">("home");
   const [searchOpen, setSearchOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
-  type ThemeMode = "default" | "soft" | "bold";
-  const [theme, setTheme] = useState<ThemeMode>(() => {
-    const stored = localStorage.getItem("theme");
-    if (stored === "soft" || stored === "bold") return stored;
-    return "default";
-  });
-  const cycleTheme = () => {
-    setTheme((t) =>
-      t === "default" ? "soft" : t === "soft" ? "bold" : "default",
-    );
-  };
-  useEffect(() => {
-    if (theme === "soft" || theme === "bold") {
-      document.documentElement.setAttribute("data-theme", theme);
-    } else {
-      document.documentElement.removeAttribute("data-theme");
-    }
-    localStorage.setItem("theme", theme);
-  }, [theme]);
-
 
   const [cities, setCities] = useState<City[]>([]);
   const [searchInput, setSearchInput] = useState("");
@@ -311,19 +291,6 @@ const Home: React.FC = () => {
             </div>
           )}
         </div>
-        <button
-          className="theme-toggle-btn"
-          onClick={cycleTheme}
-          title={
-            theme === "default"
-              ? "뉴모피즘 UI로 전환"
-              : theme === "soft"
-                ? "볼드 UI로 전환"
-                : "기본 UI로 전환"
-          }
-        >
-          {theme === "default" ? "🫧" : theme === "soft" ? "🎨" : "✦"}
-        </button>
       </div>
 
       {/* ═══ HOME SCREEN ═══ */}
