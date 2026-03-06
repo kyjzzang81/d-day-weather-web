@@ -52,3 +52,11 @@ coverage/
 .vite/
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# 디자인 참고용 로컬 파일
+colors.jpg
+detail-page.png
+sample-weather-detail.html
+sample-weather-detail-card.html
+frontend/public/favicon2.png
+frontend/public/logo.png
