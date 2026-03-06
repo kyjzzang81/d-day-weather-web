@@ -43,11 +43,6 @@ const Home: React.FC = () => {
     localStorage.setItem("theme", theme);
   }, [theme]);
 
-  const cycleTheme = () => {
-    setTheme((t) =>
-      t === "default" ? "soft" : t === "soft" ? "bold" : "default",
-    );
-  };
 
   const [cities, setCities] = useState<City[]>([]);
   const [searchInput, setSearchInput] = useState("");
