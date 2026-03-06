@@ -87,13 +87,15 @@ const Home: React.FC = () => {
     fetchCities().then(setCities).catch(console.error);
   }, []);
 
+  const minDelay = () => new Promise<void>((r) => setTimeout(r, 1000));
+
   const loadSingle = async (city: string, month: number, day: number) => {
     setLoading(true);
     setError(null);
     setScreen("detail");
     setNavDateStr(`${month}월 ${day}일`);
     try {
-      const data = await fetchWeatherStatistics(city, month, day);
+      const [data] = await Promise.all([fetchWeatherStatistics(city, month, day), minDelay()]);
       setStatistics(data);
       const dateStr = `${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
       addSearchHistory(city, dateStr, data.city_korean);
@@ -102,7 +104,7 @@ const Home: React.FC = () => {
       if (city !== "seoul") {
         setSelectedCityId("seoul");
         try {
-          const fallback = await fetchWeatherStatistics("seoul", month, day);
+          const [fallback] = await Promise.all([fetchWeatherStatistics("seoul", month, day), minDelay()]);
           setStatistics(fallback);
           const dateStr = `${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
           addSearchHistory("seoul", dateStr, fallback.city_korean);
@@ -129,7 +131,7 @@ const Home: React.FC = () => {
     setScreen("detail");
     setNavDateStr(`${sm}월 ${sd}일 ~ ${em}월 ${ed}일`);
     try {
-      const data = await fetchDateRangeStatistics(city, sm, sd, em, ed);
+      const [data] = await Promise.all([fetchDateRangeStatistics(city, sm, sd, em, ed), minDelay()]);
       setStatistics(data);
     } catch (err) {
       console.error(err);
@@ -177,8 +179,13 @@ const Home: React.FC = () => {
   };
 
   const [homeCards, setHomeCards] = useState<HomeCard[]>([]);
+  const [homeLoading, setHomeLoading] = useState(true);
   useEffect(() => {
-    fetchHomeCards().then(setHomeCards);
+    const minDelay = new Promise<void>((r) => setTimeout(r, 1000));
+    Promise.all([fetchHomeCards(), minDelay]).then(([cards]) => {
+      setHomeCards(cards);
+      setHomeLoading(false);
+    });
   }, []);
 
   const historyList = getSearchHistoryList();
@@ -311,7 +318,18 @@ const Home: React.FC = () => {
       </div>
 
       {/* ═══ HOME SCREEN ═══ */}
-      {screen === "home" && (
+      {screen === "home" && homeLoading && (
+        <div className="loading-wrap">
+          <img
+            src="https://nisxyhqxihbharxnmmdw.supabase.co/storage/v1/object/public/brand/logo.png"
+            alt="로딩 중"
+            className="loading-logo"
+          />
+          <p className="loading-text">잠시만 기다려주세요...</p>
+        </div>
+      )}
+
+      {screen === "home" && !homeLoading && (
         <div className="home-screen">
           <div className="home-inner">
             {/* ── 로고 + 태양 ── */}
@@ -319,7 +337,7 @@ const Home: React.FC = () => {
               <div className="home-logo-block">
                 <div className="home-logo-brand">
                   <img
-                    src="/public/logo.png"
+                    src="https://nisxyhqxihbharxnmmdw.supabase.co/storage/v1/object/public/brand/logo.png"
                     alt="logo"
                     className="home-logo-img"
                   />
@@ -449,22 +467,12 @@ const Home: React.FC = () => {
 
           {loading && (
             <div className="loading-wrap">
-              <DotLottieReact
-                src="/loading.lottie"
-                loop
-                autoplay
-                style={{ width: 120, height: 120 }}
+              <img
+                src="https://nisxyhqxihbharxnmmdw.supabase.co/storage/v1/object/public/brand/logo.png"
+                alt="로딩 중"
+                className="loading-logo"
               />
-              <p
-                style={{
-                  marginTop: 8,
-                  color: "var(--c-dim)",
-                  fontWeight: 500,
-                  fontSize: 14,
-                }}
-              >
-                날씨 데이터를 불러오는 중...
-              </p>
+              <p className="loading-text">날씨 데이터를 불러오는 중...</p>
             </div>
           )}
 

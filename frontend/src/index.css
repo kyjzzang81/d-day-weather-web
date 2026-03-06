@@ -2353,9 +2353,33 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.75);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.loading-logo {
+  width: 280px;
+  max-width: 70%;
+  height: auto;
+  animation: loadingPulse 1.4s ease-in-out infinite;
+}
+.loading-text {
+  margin-top: 1rem;
+  font-size: 0.8125rem;
+  color: var(--c-dim);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+@keyframes loadingPulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.92);
+  }
 }
 .footer {
   text-align: center;
