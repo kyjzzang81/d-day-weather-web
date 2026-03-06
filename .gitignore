@@ -60,3 +60,6 @@ sample-weather-detail.html
 sample-weather-detail-card.html
 frontend/public/favicon2.png
 frontend/public/logo.png
+
+# Xcode 자동 생성 파일
+**/xcshareddata/swiftpm/
