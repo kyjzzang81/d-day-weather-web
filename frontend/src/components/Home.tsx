@@ -95,7 +95,10 @@ const Home: React.FC = () => {
     setScreen("detail");
     setNavDateStr(`${month}월 ${day}일`);
     try {
-      const [data] = await Promise.all([fetchWeatherStatistics(city, month, day), minDelay()]);
+      const [data] = await Promise.all([
+        fetchWeatherStatistics(city, month, day),
+        minDelay(),
+      ]);
       setStatistics(data);
       const dateStr = `${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
       addSearchHistory(city, dateStr, data.city_korean);
@@ -104,7 +107,10 @@ const Home: React.FC = () => {
       if (city !== "seoul") {
         setSelectedCityId("seoul");
         try {
-          const [fallback] = await Promise.all([fetchWeatherStatistics("seoul", month, day), minDelay()]);
+          const [fallback] = await Promise.all([
+            fetchWeatherStatistics("seoul", month, day),
+            minDelay(),
+          ]);
           setStatistics(fallback);
           const dateStr = `${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
           addSearchHistory("seoul", dateStr, fallback.city_korean);
@@ -131,7 +137,10 @@ const Home: React.FC = () => {
     setScreen("detail");
     setNavDateStr(`${sm}월 ${sd}일 ~ ${em}월 ${ed}일`);
     try {
-      const [data] = await Promise.all([fetchDateRangeStatistics(city, sm, sd, em, ed), minDelay()]);
+      const [data] = await Promise.all([
+        fetchDateRangeStatistics(city, sm, sd, em, ed),
+        minDelay(),
+      ]);
       setStatistics(data);
     } catch (err) {
       console.error(err);
@@ -302,7 +311,7 @@ const Home: React.FC = () => {
             </div>
           )}
         </div>
-        <button
+        {/* <button
           className="theme-toggle-btn"
           onClick={cycleTheme}
           title={
@@ -314,7 +323,7 @@ const Home: React.FC = () => {
           }
         >
           {theme === "default" ? "🫧" : theme === "soft" ? "🎨" : "✦"}
-        </button>
+        </button> */}
       </div>
 
       {/* ═══ HOME SCREEN ═══ */}
@@ -325,7 +334,6 @@ const Home: React.FC = () => {
             alt="로딩 중"
             className="loading-logo"
           />
-          <p className="loading-text">잠시만 기다려주세요...</p>
         </div>
       )}
 
