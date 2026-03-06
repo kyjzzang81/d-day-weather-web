@@ -1,8 +1,8 @@
-# D-Day Weather Web — 아키텍처 문서
+# D-Day Weather — 아키텍처 문서
 
 ## 📋 프로젝트 개요
 
-전세계 138개 도시의 86년치(1940-2025) 시간별 날씨 데이터를 기반으로, 특정 날짜의 날씨 패턴을 분석하고 여행 인사이트를 제공하는 웹 애플리케이션입니다.
+전세계 138개 이상 도시의 10년치(2016-2025) 시간별 날씨 데이터를 기반으로, 특정 날짜 또는 기간의 날씨 패턴을 분석하고 여행 인사이트를 제공하는 웹/모바일 애플리케이션입니다.
 
 ---
 
@@ -13,20 +13,27 @@
 |---|---|
 | Framework | React 18 + TypeScript |
 | Build Tool | Vite |
-| Styling | TailwindCSS + CSS 변수 (커스텀 블루 테마) |
+| Styling | CSS 변수 기반 디자인 시스템 (rem 단위, 타이포/스페이싱 토큰) |
 | 데이터 조회 | Supabase JS Client (`@supabase/supabase-js`) |
-| 날짜 선택 | react-datepicker |
+| 애니메이션 | `@lottiefiles/dotlottie-react` |
 | 조회 이력 | localStorage |
 
-### 데이터
+### 데이터 (Supabase)
 | 항목 | 내용 |
 |---|---|
 | 저장소 | Supabase PostgreSQL |
-| 테이블 | `cities`, `hourly_weather`, `collection_log` |
+| 테이블 | `cities`, `hourly_weather`, `home_cards`, `collection_log` |
+| Storage | `cities_images` 버킷 (홈 카드 배경 이미지) |
 | 데이터 소스 | Open-Meteo Historical Weather API |
-| 기간 | 1940-01-01 ~ 2025-12-31 (86년) |
+| 기간 | 2016-01-01 ~ 2025-12-31 |
 | 단위 | 시간별 (최대 24행/일/도시) |
-| 도시 수 | 138개 |
+
+### 모바일 (`capacitor` 브랜치)
+| 항목 | 내용 |
+|---|---|
+| 플랫폼 | Capacitor |
+| App ID | `com.ddayweather.app` |
+| 지원 OS | iOS, Android |
 
 > 별도의 백엔드 서버가 없으며, 프론트엔드에서 Supabase를 직접 조회합니다.
 
@@ -39,97 +46,108 @@ d-day-weather-web/
 ├── frontend/
 │   ├── index.html
 │   ├── vite.config.ts
+│   ├── capacitor.config.ts          # (capacitor 브랜치)
+│   ├── ios/                         # (capacitor 브랜치)
+│   ├── android/                     # (capacitor 브랜치)
 │   └── src/
-│       ├── main.tsx                 # React 앱 진입점
-│       ├── App.tsx                  # 루트 컴포넌트 (Home 렌더링)
-│       ├── index.css                # 글로벌 스타일 (CSS 변수, 커스텀 테마)
-│       │
+│       ├── main.tsx
+│       ├── App.tsx
+│       ├── index.css                # 디자인 토큰 + 글로벌 스타일
 │       ├── lib/
-│       │   └── supabase.ts          # Supabase 클라이언트 (anon key)
-│       │
+│       │   └── supabase.ts
 │       ├── types/
-│       │   └── weather.ts           # 모든 TypeScript 인터페이스 정의
-│       │
+│       │   └── weather.ts
 │       ├── utils/
-│       │   ├── weatherApi.ts        # Supabase 쿼리 + 데이터 집계 로직
-│       │   ├── weatherRules.ts      # 날씨 규칙 엔진 (판정/추천/콘텐츠)
-│       │   └── storage.ts           # 조회 이력 (localStorage)
-│       │
+│       │   ├── weatherApi.ts        # Supabase 쿼리 + fetchHomeCards
+│       │   ├── weatherRules.ts      # 날씨 규칙 엔진
+│       │   └── storage.ts
 │       └── components/
-│           ├── Home.tsx             # 히어로 영역 + 검색 오버레이 + 전체 레이아웃
-│           └── WeatherStats.tsx     # 날씨 상세 카드 모음
+│           ├── Home.tsx             # 홈 화면 + 검색 오버레이
+│           ├── WeatherStats.tsx     # 단일 날짜 Reels UI
+│           └── WeatherStatsRange.tsx# 기간 Reels UI
 │
-├── COLLECTION.md                    # Supabase 스키마 및 데이터 수집 가이드
-├── weather-rule-table.md            # 날씨 규칙 엔진 설계 스펙
-├── ARCHITECTURE.md                  # 이 문서
-└── README.md                        # 프로젝트 소개
+├── supabase/
+│   └── home_cards.sql               # home_cards 테이블 생성 SQL
+│
+└── (문서 파일들)
 ```
 
 ---
 
 ## 🔄 데이터 흐름
 
+### 단일 날짜 조회
+
 ```
-사용자 (날짜 + 도시 선택)
+사용자 (도시 + 날짜 선택)
     │
     ▼
-Home.tsx
-  └── loadWeatherData(city, month, day)
-        │
-        ▼
+Home.tsx — loadSingle(city, month, day)
+    │         └── Promise.all([fetch, 1초 최소 대기])
+    ▼
 weatherApi.ts / fetchWeatherStatistics()
-  ├── Supabase: cities 테이블에서 도시 메타(위도 등) 조회
-  ├── Supabase: hourly_weather에서 ±7일 범위 × 2016-2025년 병렬 쿼리
-  │     → 각 연도별 대상 날짜 ±7일의 시간별 데이터 수집
-  └── 집계 계산:
-        ├── 날씨 빈도 (맑음/흐림/비/눈)
-        ├── 기온 통계 (최고/최저/평균 × TempStat)
-        ├── 강수 확률 / 강설 확률 / 맑음 확률
-        ├── 평균 풍속 / 최대 돌풍
-        ├── 시간별 평균 (hourlyAverages: 0~23시)
-        ├── 기후 트렌드 (2021-2025 vs 2016-2020 평균 비교)
-        └── 인근 날짜 통계 (nearbyDates: ±7일 각각의 요약)
-        │
-        ▼
-WeatherStatistics (타입) 반환
-        │
-        ▼
+  ├── Supabase: cities → 도시 메타(위도 등) 조회
+  ├── Supabase: hourly_weather → ±7일 × 2016-2025 병렬 쿼리
+  └── 집계: 날씨 빈도 / 기온 통계 / 강수 확률 / 시간별 평균 / 기후 트렌드 / 인근 날짜
+    │
+    ▼
 weatherRules.ts / analyzeWeather()
-  ├── 위도 보정 온도 계산
-  ├── 등급 판정: TempGrade / RainGrade / SkyGrade / Season
-  ├── 플래그 탐지: SNOW / HIGH_DIURNAL / WINDY / TREND_UP / TREND_DOWN
-  ├── 여행 판정 (Verdict): 매트릭스 기반 1-5단계
-  ├── 요약 텍스트 / 베스트 시간대 텍스트 / 트렌드 텍스트 생성
-  ├── 추천 활동 / 피할 것 / 준비물 목록 생성
-  └── 인근 날짜 추천 (buildNearbyRecs)
-        │
-        ▼
-WeatherAnalysis (타입) 반환
-        │
-        ▼
-WeatherStats.tsx (카드 UI 렌더링)
+  ├── 위도 보정 / 등급 판정 / 플래그 탐지
+  ├── 여행 판정 (5단계) / 자연어 요약 / 추천 활동 / 준비물
+  └── 인근 날짜 추천
+    │
+    ▼
+WeatherStats.tsx — Reels 슬라이드 UI 렌더링
+```
+
+### 기간 조회
+
+```
+사용자 (도시 + 시작일 ~ 종료일)
+    │
+    ▼
+Home.tsx — loadRange(city, sm, sd, em, ed)
+    │
+    ▼
+weatherApi.ts / fetchDateRangeStatistics()
+  └── 각 날짜별 fetchWeatherStatistics() 병렬 실행 → mergeWeatherStatistics()
+    │
+    ▼
+WeatherStatsRange.tsx — 기간 집계 Reels UI
+```
+
+### 홈 기획 카드
+
+```
+Home.tsx 마운트
+    │
+    ▼
+fetchHomeCards()
+  └── Supabase: home_cards (is_active=true, sort_order 정렬)
+      └── image_url → resolveImageUrl() → cities_images Storage URL 변환
+    │
+    ▼
+home-carousel 렌더링 (카드 클릭 → loadSingle / loadRange)
 ```
 
 ---
 
 ## 🗄️ Supabase 스키마
 
-### `cities` — 도시 메타
-
+### `cities`
 | 컬럼 | 타입 | 설명 |
 |---|---|---|
-| `id` | TEXT (PK) | 도시 ID (`seoul`, `tokyo` 등) |
+| `id` | TEXT (PK) | 도시 ID (예: `seoul`, `da-nang`) |
 | `name_en` | TEXT | 영문명 |
 | `name_ko` | TEXT | 한글명 |
 | `country` | TEXT | 국가 코드 |
 | `lat` | DOUBLE PRECISION | 위도 |
 | `lon` | DOUBLE PRECISION | 경도 |
 
-### `hourly_weather` — 시간별 날씨 (핵심)
-
+### `hourly_weather`
 | 컬럼 | 타입 | 설명 |
 |---|---|---|
-| `city_id` | TEXT (FK) | 도시 참조 |
+| `city_id` | TEXT (FK) | cities 참조 |
 | `timestamp` | TIMESTAMPTZ | UTC 기준 시각 |
 | `temperature` | REAL | 기온 °C |
 | `apparent_temp` | REAL | 체감온도 °C |
@@ -145,85 +163,90 @@ WeatherStats.tsx (카드 UI 렌더링)
 - **UNIQUE**: `(city_id, timestamp)`
 - **INDEX**: `(city_id, timestamp)`, `(timestamp)`
 
-> 자세한 스키마 및 수집 방법은 [COLLECTION.md](./COLLECTION.md) 참조
+### `home_cards`
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| `id` | BIGSERIAL (PK) | — |
+| `title` | TEXT | 카드 제목 |
+| `subtitle` | TEXT | 서브타이틀 |
+| `nights_label` | TEXT | 기간 텍스트 (예: "3박 4일") |
+| `date_label` | TEXT | 날짜 표시 텍스트 |
+| `image_url` | TEXT | `cities_images` 버킷 파일명 또는 전체 URL |
+| `city_id` | TEXT (FK) | 클릭 시 로드할 도시 |
+| `card_type` | TEXT | `date` / `range` |
+| `date_from` | TEXT | MM-DD 형식 |
+| `date_to` | TEXT | MM-DD 형식 (range만) |
+| `sort_order` | INTEGER | 표시 순서 |
+| `is_active` | BOOLEAN | 노출 여부 |
+
+- RLS: anon → SELECT (is_active=true만), authenticated → 전체 CRUD
+- 생성 SQL: `supabase/home_cards.sql`
+
+---
+
+## 📱 UI 구성
+
+### 홈 화면 (`Home.tsx`)
+
+```
+top-bar-wrap
+  └── 상단 탑바 (Vercel 등 외부 링크)
+home-screen
+  └── home-inner
+      ├── home-top-row (로고 + Lottie 태양)
+      ├── home-headline ("Discover the Best Day to Travel")
+      ├── home-chips (인기 도시 + "다른 도시로 찾기")
+      └── home-carousel-wrap (기획 카드 캐러셀)
+search-overlay (Portal)
+loading-wrap (Portal, homeLoading 시)
+```
+
+### Reels UI (`WeatherStats.tsx` / `WeatherStatsRange.tsx`)
+
+| 슬라이드 | 컴포넌트 | 내용 |
+|---|---|---|
+| 1 | `Reel1Summary` | Lottie 아이콘, 기온, 바람/습도/강수확률 + 도움말 |
+| 2 | `Reel2Verdict` | 여행 판정, 추천/비추천 활동 |
+| 3 | `Reel3Precip` | 예상 강수량 + 도움말 |
+| 4 | `Reel4Packing` | 준비물 확인, 인근 날짜 추천 |
+| 5 | `Reel5Timeline` | 시간대별 날씨 타임라인 |
+| 6 | `Reel6Years` | 연도별 실제 기록 (바텀 시트) |
+| 7 | `Reel7Trend` | 기후 트렌드 |
+
+### 다이얼로그 처리
+
+모든 다이얼로그는 `ReactDOM.createPortal`로 `document.body`에 렌더링:
+- `PackingDialog` — 준비물
+- `HelpDialog` — 바람/습도/강수확률/예상강수량 도움말
+- 연도별 기록 바텀 시트
 
 ---
 
 ## 🧠 날씨 규칙 엔진 (`weatherRules.ts`)
 
-`weather-rule-table.md` 스펙을 기반으로 구현된 규칙 엔진입니다.
-
 ### 등급 체계
-
-| 등급 종류 | 값 | 기준 |
+| 등급 | 값 | 기준 |
 |---|---|---|
 | **TempGrade** | COLD / COOL / MILD / WARM | 위도 보정 평균 기온 |
 | **RainGrade** | NO_RAIN / LOW_RAIN / MID_RAIN / HIGH_RAIN | 강수 확률 % |
 | **SkyGrade** | CLEAR / PARTLY / CLOUDY | 맑음 확률 % |
 | **Season** | SPRING / SUMMER / AUTUMN / WINTER / DRY_SEASON / WET_SEASON | 위도 + 월 |
 
-### 특수 플래그
-
-| 플래그 | 조건 |
-|---|---|
-| `SNOW` | 강설 확률 > 20% |
-| `HIGH_DIURNAL` | 일교차 > 12°C |
-| `WINDY` | 평균 풍속 > 20km/h |
-| `TREND_UP` | 최근 5년 vs 과거 5년 기온 +0.5°C 이상 상승 |
-| `TREND_DOWN` | 최근 5년 vs 과거 5년 기온 -0.5°C 이상 하락 |
-
-### 여행 판정 (Verdict)
-
-TempGrade × RainGrade 조합 매트릭스로 5단계 판정:
-- ⭐⭐⭐ 최고예요
-- ⭐⭐ 좋아요
-- ⭐ 무난해요
-- ⚠️ 아쉬워요
-- ❌ 힘들어요
+### 여행 판정 (5단계)
+TempGrade × RainGrade 조합 매트릭스:
+- ⭐⭐⭐ 최고예요 / ⭐⭐ 좋아요 / ⭐ 무난해요 / ⚠️ 아쉬워요 / ❌ 힘들어요
 
 > 자세한 판정 로직은 [weather-rule-table.md](./weather-rule-table.md) 참조
 
 ---
 
-## 🎨 UI 구성 (`WeatherStats.tsx`)
+## 📈 쿼리 최적화
 
-| 카드 | 내용 |
-|---|---|
-| **SummaryCard** | 날씨 한 줄 요약 텍스트 |
-| **VerdictCard** | 여행 적합성 등급 + 설명 |
-| **TempRangeCard** | 기온 범위 시각화 + 기후 트렌드 |
-| **PrecipCard** | 강수/강설 확률 |
-| **TimelineCard** | 시간별 날씨 이모지 타임라인 (베스트 시간대 표시) |
-| **NearbyDatesCard** | ±7일 내 날씨 좋은 날 추천 |
-| **ActivitiesGuide** | 추천 활동 / 피할 것 (토글) |
-| **TrendCard** | 기후 변화 트렌드 |
-| **YearCard** | 연도별 날씨 요약 (시간별 이모지) |
-| **PackingDialog** | 준비물 바텀 시트 (Portal) |
-
-### 다이얼로그 처리
-
-`Home.tsx`의 검색 오버레이와 `WeatherStats.tsx`의 `PackingDialog`는 `ReactDOM.createPortal`을 사용하여 `document.body`에 직접 렌더링합니다. 이는 `.phone` 컨테이너의 `overflow: hidden`이 `position: fixed` 동작에 영향을 미치는 것을 방지합니다.
+- 연도별(2016-2025) 쿼리를 **`Promise.all`로 병렬 실행**
+- 대상 날짜의 **±7일 범위** 한 번에 조회 (인근 날짜 통계 동시 수집)
+- Supabase 인덱스 `(city_id, timestamp)` 활용
 
 ---
 
-## 🔧 환경 변수
-
-| 변수 | 설명 |
-|---|---|
-| `VITE_SUPABASE_URL` | Supabase 프로젝트 URL |
-| `VITE_SUPABASE_KEY` | Supabase anon (public) key |
-
-`.env.local` 파일에 설정 (`.gitignore`에 포함됨).
-
----
-
-## 📈 쿼리 최적화 전략
-
-- 연도별(2016-2025) 쿼리를 **`Promise.all`로 병렬 실행**하여 총 대기 시간 최소화
-- 대상 날짜의 **±7일 범위**를 한 번에 조회하여 인근 날짜 통계까지 한 번에 수집
-- Supabase 인덱스 `(city_id, timestamp)` 활용으로 고속 조회
-
----
-
-**작성일**: 2026-02-19  
-**버전**: 2.0
+**작성일**: 2026-03-06  
+**버전**: 3.0

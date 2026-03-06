@@ -2,8 +2,8 @@
 
 ## 🎯 현재 구현 상태
 
-**상태**: ✅ 운영 중  
-**마지막 업데이트**: 2026-02-19
+**상태**: ✅ 운영 중 (Vercel 배포)  
+**마지막 업데이트**: 2026-03-06
 
 ---
 
@@ -16,20 +16,22 @@
 - ✅ `weather-rule-table.md` — 날씨 규칙 엔진 설계 스펙
 - ✅ `DEPLOYMENT.md` — 배포 가이드 (Vercel)
 - ✅ `QUICK_DEPLOY.md` — 5분 배포 가이드
+- ✅ `supabase/home_cards.sql` — home_cards 테이블 생성 SQL
 
 ### 🎨 Frontend (`frontend/src/`)
 
 #### 진입점
 - ✅ `main.tsx` — React 앱 진입점
 - ✅ `App.tsx` — 루트 컴포넌트
-- ✅ `index.css` — 글로벌 스타일 (CSS 변수 기반 블루 테마)
+- ✅ `index.css` — 글로벌 스타일 (CSS 변수, rem 디자인 토큰)
 
 #### 컴포넌트
-- ✅ `components/Home.tsx` — 히어로 영역 + 검색 오버레이(도시/날짜 선택) + 전체 레이아웃
-- ✅ `components/WeatherStats.tsx` — 날씨 상세 카드 모음 (8종 카드)
+- ✅ `components/Home.tsx` — 홈 화면 (기획 카드 캐러셀, 검색 오버레이, 로딩 화면)
+- ✅ `components/WeatherStats.tsx` — 단일 날짜 날씨 상세 (Reels 슬라이드 7종)
+- ✅ `components/WeatherStatsRange.tsx` — 기간 날씨 상세 (Reels 슬라이드 7종)
 
 #### 유틸리티
-- ✅ `utils/weatherApi.ts` — Supabase 쿼리 + 데이터 집계
+- ✅ `utils/weatherApi.ts` — Supabase 쿼리 + 데이터 집계 + fetchHomeCards
 - ✅ `utils/weatherRules.ts` — 날씨 규칙 엔진 (판정·추천·콘텐츠)
 - ✅ `utils/storage.ts` — 조회 이력 (localStorage)
 - ✅ `lib/supabase.ts` — Supabase 클라이언트 초기화
@@ -37,33 +39,58 @@
 #### 타입
 - ✅ `types/weather.ts` — 모든 TypeScript 타입 정의
 
+#### 에셋
+- ✅ `public/favicon.png` — 앱 파비콘 (태양 아이콘)
+- ✅ `public/*.lottie` — 날씨별 Lottie 애니메이션 파일
+
 ---
 
 ## ✅ 구현된 기능
 
+### 홈 화면
+- Lottie 태양 애니메이션 + "Discover the Best Day to Travel" 헤드라인
+- 인기 도시 칩 (7개) + "다른 도시로 찾기" 버튼
+- **기획 카드 캐러셀**: Supabase `home_cards` 테이블 연동, `cities_images` Storage 이미지
+- 로딩 화면: Supabase Storage 로고 PNG + pulse 애니메이션 + 최소 1초 유지
+- 검색 오버레이: 날짜/기간 토글, 도시 검색
+
 ### 날씨 데이터 조회
-- Supabase `hourly_weather` 테이블에서 연도별(2016-2025) 병렬 쿼리
-- 대상 날짜 ±7일 범위 조회로 인근 날짜 데이터 동시 수집
-- 날씨 빈도, 기온 통계, 강수 확률, 풍속, 시간별 평균, 기후 트렌드 계산
+- 단일 날짜: `fetchWeatherStatistics()` — ±7일 범위 × 2016-2025 병렬 쿼리
+- 날짜 범위: `fetchDateRangeStatistics()` — 최대 14일 구간 집계
+- 홈 기획 카드: `fetchHomeCards()` — is_active 필터, sort_order 정렬
+
+### Reels UI (Instagram 스타일 세로 스크롤)
+| 슬라이드 | 내용 |
+|---|---|
+| Slide 1 | 날씨 요약 (Lottie 아이콘, 기온, 바람/습도/강수확률 + 도움말) |
+| Slide 2 | 여행 판정 + 추천/비추천 활동 |
+| Slide 3 | 예상 강수량 상세 |
+| Slide 4 | 준비물 확인 + 인근 날짜 추천 |
+| Slide 5 | 시간대별 날씨 타임라인 |
+| Slide 6 | 연도별 실제 기록 |
+| Slide 7 | 기후 트렌드 |
+
+### 다이얼로그
+- `PackingDialog` — 준비물 바텀 시트 (Portal)
+- `HelpDialog` — 바람/습도/강수확률/예상강수량 도움말 (Portal)
+- 연도별 실제 기록 — 바텀 시트 (Portal)
 
 ### 날씨 규칙 엔진 (`weatherRules.ts`)
 - 위도 기반 온도 보정
-- 기온/강수/하늘 등급 판정 (TempGrade / RainGrade / SkyGrade)
-- 계절 판정 (위도 + 월 기반, 열대/아열대 포함)
-- 특수 플래그 감지 (눈, 일교차, 강풍, 기후 트렌드)
+- 등급 판정: TempGrade / RainGrade / SkyGrade / Season
+- 특수 플래그: SNOW / HIGH_DIURNAL / WINDY / TREND_UP / TREND_DOWN
 - 여행 판정 매트릭스 (5단계)
-- 자연어 요약 / 베스트 시간대 / 트렌드 텍스트 생성
-- 추천 활동 / 피할 것 / 준비물 목록 생성
-- 인근 날짜 점수화 및 추천
+- 자연어 요약 / 베스트 시간대 / 추천 활동 / 준비물
 
-### UI/UX
-- 블루 그라디언트 히어로 영역 (평균 기온, 날씨 이모지, 바람/습도/강수확률)
-- 폰 프레임 레이아웃 (390px, 데스크톱에서 카드 형태)
-- 8종 날씨 정보 카드 (요약, 판정, 기온, 강수, 타임라인, 인근날짜, 활동, 트렌드)
-- 연도별 날씨 카드 (시간별 이모지 표시)
-- 준비물 바텀 시트 (sticky 버튼 → 슬라이드업)
-- 날짜/도시 선택 다이얼로그 (React Portal로 body에 렌더링)
-- 로딩 스피너 / 에러 처리
+---
+
+## 🌿 브랜치 구조
+
+| 브랜치 | 설명 |
+|---|---|
+| `main` | 웹 프로덕션 |
+| `onlyWeb` | 웹 전용 스냅샷 |
+| `capacitor` | iOS/Android 앱 개발 (Capacitor) |
 
 ---
 
@@ -81,15 +108,16 @@
 | 항목 | 내용 |
 |---|---|
 | 저장소 | Supabase PostgreSQL |
-| 수집 기간 | 1940-01-01 ~ 2025-12-31 |
-| 도시 수 | 138개 |
+| 수집 기간 | 2016-01-01 ~ 2025-12-31 |
+| 도시 수 | 138개 이상 |
 | 데이터 단위 | 시간별 |
-| 수집 완료 | 2026-02-19 |
+| Storage 버킷 | `cities_images` (카드 배경 이미지) |
 
 ---
 
 ## 🚀 배포
 
-- **플랫폼**: Vercel (프론트엔드 단독 배포)
-- **환경 변수**: Vercel 대시보드에서 `VITE_SUPABASE_URL`, `VITE_SUPABASE_KEY` 설정
+- **플랫폼**: Vercel (`main` 브랜치 자동 배포)
+- **빌드 명령**: `cd frontend && npm install && npm run build`
+- **환경 변수**: Vercel 대시보드에서 설정
 - 자세한 내용은 [DEPLOYMENT.md](./DEPLOYMENT.md) 참조
