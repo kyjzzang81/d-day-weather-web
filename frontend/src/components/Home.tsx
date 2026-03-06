@@ -34,6 +34,11 @@ const Home: React.FC = () => {
     if (stored === "soft" || stored === "bold") return stored;
     return "default";
   });
+  const cycleTheme = () => {
+    setTheme((t) =>
+      t === "default" ? "soft" : t === "soft" ? "bold" : "default",
+    );
+  };
   useEffect(() => {
     if (theme === "soft" || theme === "bold") {
       document.documentElement.setAttribute("data-theme", theme);
@@ -306,7 +311,7 @@ const Home: React.FC = () => {
             </div>
           )}
         </div>
-        {/* <button
+        <button
           className="theme-toggle-btn"
           onClick={cycleTheme}
           title={
@@ -318,7 +323,7 @@ const Home: React.FC = () => {
           }
         >
           {theme === "default" ? "🫧" : theme === "soft" ? "🎨" : "✦"}
-        </button> */}
+        </button>
       </div>
 
       {/* ═══ HOME SCREEN ═══ */}
