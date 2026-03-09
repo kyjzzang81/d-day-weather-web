@@ -660,6 +660,151 @@ export const fetchHomeCards = async (): Promise<HomeCard[]> => {
   }));
 };
 
+// ─── Today 예보 (Open-Meteo) ─────────────────────────────────────────────────
+
+export interface TodayWeatherData {
+  city_id: string;
+  city_korean: string;
+  lat: number;
+
+  current: {
+    temperature: number;
+    apparentTemp: number;
+    weatherCode: number;
+    humidity: number;
+    precipitation: number;
+    windSpeed: number;
+  };
+
+  today: {
+    tempMax: number;
+    tempMin: number;
+    precipProbMax: number;
+    precipSum: number;
+    windSpeedMax: number;
+    weatherCode: number;
+  };
+
+  hourly: Array<{
+    hour: number;
+    temperature: number;
+    apparentTemp: number;
+    precipProb: number;
+    precipitation: number;
+    weatherCode: number;
+    cloudCover: number;
+    windSpeed: number;
+  }>;
+
+  forecast: Array<{
+    dateStr: string;
+    weekday: string;
+    weatherCode: number;
+    tempMax: number;
+    tempMin: number;
+    precipProbMax: number;
+    precipSum: number;
+    windSpeedMax: number;
+  }>;
+}
+
+const WEEKDAY_KO = ['일', '월', '화', '수', '목', '금', '토'];
+
+export const fetchTodayWeather = async (
+  cityId: string
+): Promise<TodayWeatherData> => {
+  // 도시 lat/lon 조회
+  const { data: cityData, error: cityError } = await supabase
+    .from('cities')
+    .select('id, name_ko, lat, lon')
+    .eq('id', cityId)
+    .single();
+
+  if (cityError || !cityData || cityData.lat == null || cityData.lon == null) {
+    throw new Error('해당 도시의 예보를 지원하지 않아요');
+  }
+
+  const { lat, lon } = cityData;
+
+  const params = new URLSearchParams({
+    latitude: String(lat),
+    longitude: String(lon),
+    current: 'temperature_2m,apparent_temperature,weather_code,relative_humidity_2m,precipitation,wind_speed_10m',
+    hourly: 'temperature_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,cloud_cover,wind_speed_10m',
+    daily: 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,wind_speed_10m_max',
+    forecast_days: '7',
+    timezone: 'auto',
+  });
+
+  const res = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`);
+  if (!res.ok) throw new Error('날씨 예보를 불러오지 못했어요');
+  const json = await res.json();
+
+  // 오늘 날짜(timezone=auto 기준) 인덱스 파악
+  const todayStr = json.daily.time[0] as string;
+  const todayStartIdx = (json.hourly.time as string[]).findIndex((t) =>
+    t.startsWith(todayStr)
+  );
+  const todayEndIdx = todayStartIdx + 24;
+
+  const rawHourly = (json.hourly.time as string[])
+    .slice(todayStartIdx, todayEndIdx)
+    .map((_: string, i: number) => {
+      const absIdx = todayStartIdx + i;
+      return {
+        hour: i,
+        temperature: Math.round(json.hourly.temperature_2m[absIdx]),
+        apparentTemp: Math.round(json.hourly.apparent_temperature[absIdx]),
+        precipProb: json.hourly.precipitation_probability[absIdx] ?? 0,
+        precipitation: json.hourly.precipitation[absIdx] ?? 0,
+        weatherCode: json.hourly.weather_code[absIdx] ?? 0,
+        cloudCover: json.hourly.cloud_cover[absIdx] ?? 0,
+        windSpeed: json.hourly.wind_speed_10m[absIdx] ?? 0,
+      };
+    });
+
+  const forecast = (json.daily.time as string[]).map((dateStr: string, i: number) => {
+    let weekday: string;
+    if (i === 0) weekday = '오늘';
+    else if (i === 1) weekday = '내일';
+    else weekday = WEEKDAY_KO[new Date(dateStr).getDay()];
+    return {
+      dateStr,
+      weekday,
+      weatherCode: json.daily.weather_code[i] ?? 0,
+      tempMax: Math.round(json.daily.temperature_2m_max[i]),
+      tempMin: Math.round(json.daily.temperature_2m_min[i]),
+      precipProbMax: json.daily.precipitation_probability_max[i] ?? 0,
+      precipSum: json.daily.precipitation_sum[i] ?? 0,
+      windSpeedMax: json.daily.wind_speed_10m_max[i] ?? 0,
+    };
+  });
+
+  return {
+    city_id: cityId,
+    city_korean: cityData.name_ko,
+    lat,
+    current: {
+      temperature: Math.round(json.current.temperature_2m),
+      apparentTemp: Math.round(json.current.apparent_temperature),
+      weatherCode: json.current.weather_code,
+      humidity: json.current.relative_humidity_2m,
+      precipitation: json.current.precipitation,
+      windSpeed: json.current.wind_speed_10m,
+    },
+    today: {
+      tempMax: Math.round(json.daily.temperature_2m_max[0]),
+      tempMin: Math.round(json.daily.temperature_2m_min[0]),
+      precipProbMax: json.daily.precipitation_probability_max[0] ?? 0,
+      precipSum: json.daily.precipitation_sum[0] ?? 0,
+      windSpeedMax: json.daily.wind_speed_10m_max[0] ?? 0,
+      weatherCode: json.daily.weather_code[0] ?? 0,
+    },
+    hourly: rawHourly,
+    forecast,
+  };
+};
+
 export const submitContact = async (
   email: string,
   message: string

@@ -24,21 +24,31 @@ const POPULAR_CITIES = [
 
 type DateMode = "single" | "range";
 
-const Home: React.FC = () => {
+interface HomeProps {
+  cityId?: string;
+  onCityChange?: (id: string) => void;
+  ddayPreset?: { month: number; day: number } | null;
+}
+
+const Home: React.FC<HomeProps> = ({ cityId, onCityChange, ddayPreset }) => {
   const [screen, setScreen] = useState<"home" | "detail">("home");
   const [searchOpen, setSearchOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
 
   const [cities, setCities] = useState<City[]>([]);
   const [searchInput, setSearchInput] = useState("");
-  const [selectedCityId, setSelectedCityId] = useState("seoul");
+  const [selectedCityId, setSelectedCityId] = useState(cityId ?? "seoul");
 
   // 날짜 모드
   const [dateMode, setDateMode] = useState<DateMode>("single");
 
   // 단일 날짜
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
-  const [selectedDay, setSelectedDay] = useState(new Date().getDate());
+  const [selectedMonth, setSelectedMonth] = useState(
+    ddayPreset?.month ?? new Date().getMonth() + 1
+  );
+  const [selectedDay, setSelectedDay] = useState(
+    ddayPreset?.day ?? new Date().getDate()
+  );
 
   // 기간 날짜
   const [rangeStartMonth, setRangeStartMonth] = useState(
@@ -156,9 +166,10 @@ const Home: React.FC = () => {
     setSearchOpen(true);
   };
 
-  const selectCity = (cityId: string) => {
-    setSelectedCityId(cityId);
-    const city = cities.find((c) => c.id === cityId);
+  const selectCity = (id: string) => {
+    setSelectedCityId(id);
+    onCityChange?.(id);
+    const city = cities.find((c) => c.id === id);
     if (city) setSearchInput(city.nameKo);
   };
 
