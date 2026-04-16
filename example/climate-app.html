@@ -1,0 +1,2137 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CLIMATE — 날씨가 아니라 여행을 예측합니다</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,700&display=swap" rel="stylesheet">
+<style>
+
+/* ══════════════════════════════════
+   MOONSHOT AI UI KIT — DESIGN TOKENS
+   ══════════════════════════════════ */
+:root {
+  /* Colors */
+  --blue:        #5260FE;
+  --blue-light:  #EEF0FF;
+  --blue-mid:    #C4C8FF;
+  --blue-dark:   #3340CC;
+  --green:       #BEFBB6;
+  --green-dark:  #2C9E1E;
+  --green-light: #EDFCEB;
+  --orange:      #FE7C52;
+  --orange-light:#FFF0EB;
+  --purple:      #C871FD;
+  --purple-light:#F7EBFF;
+  --white:       #FFFFFF;
+  --bg:          #F9FAFB;
+  --gray-100:    #F2F4F7;
+  --gray-200:    #E4E7EC;
+  --gray-300:    #D0D5DD;
+  --gray-400:    #98A2B3;
+  --gray-500:    #667085;
+  --gray-700:    #344054;
+  --gray-900:    #101828;
+
+  /* Typography */
+  --font: 'Plus Jakarta Sans', sans-serif;
+
+  /* Radius */
+  --r-xs:  6px;
+  --r-sm:  10px;
+  --r-md:  14px;
+  --r-lg:  18px;
+  --r-xl:  24px;
+  --r-2xl: 32px;
+
+  /* Shadow */
+  --shadow-xs: 0 1px 2px rgba(16,24,40,0.05);
+  --shadow-sm: 0 1px 3px rgba(16,24,40,0.1), 0 1px 2px rgba(16,24,40,0.06);
+  --shadow-md: 0 4px 8px -2px rgba(16,24,40,0.1), 0 2px 4px -2px rgba(16,24,40,0.06);
+  --shadow-lg: 0 12px 16px -4px rgba(16,24,40,0.08), 0 4px 6px -2px rgba(16,24,40,0.03);
+}
+
+/* ══════════ RESET & BASE ══════════ */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--gray-900);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+button { font-family: var(--font); cursor: pointer; border: none; background: none; }
+
+/* ══════════ APP SHELL ══════════ */
+.app {
+  display: flex;
+  max-width: 1280px;
+  margin: 0 auto;
+  min-height: 100vh;
+  background: var(--white);
+  box-shadow: var(--shadow-lg);
+}
+
+/* ══════════ SIDEBAR ══════════ */
+.sidebar {
+  width: 240px;
+  min-height: 100vh;
+  background: var(--white);
+  border-right: 1px solid var(--gray-200);
+  display: flex;
+  flex-direction: column;
+  padding: 20px 12px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px 20px;
+  border-bottom: 1px solid var(--gray-100);
+  margin-bottom: 8px;
+}
+.brand-mark {
+  width: 32px; height: 32px;
+  background: var(--blue);
+  border-radius: var(--r-sm);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--white);
+  font-size: 16px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.brand-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--gray-900);
+  letter-spacing: -0.02em;
+}
+.brand-sub {
+  font-size: 10px;
+  color: var(--gray-400);
+  font-weight: 500;
+}
+
+.nav-section-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--gray-400);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 12px 12px 6px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  transition: all 0.15s;
+  color: var(--gray-500);
+  font-size: 13px;
+  font-weight: 500;
+  position: relative;
+  margin-bottom: 1px;
+}
+.nav-item:hover { background: var(--gray-100); color: var(--gray-700); }
+.nav-item.active { background: var(--blue-light); color: var(--blue); font-weight: 600; }
+.nav-icon { font-size: 15px; width: 20px; text-align: center; flex-shrink: 0; }
+.nav-badge {
+  margin-left: auto;
+  background: var(--orange);
+  color: var(--white);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 100px;
+  min-width: 18px;
+  text-align: center;
+}
+.nav-badge.new { background: var(--green-dark); }
+
+.sidebar-footer {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--gray-100);
+}
+.user-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+.user-row:hover { background: var(--gray-100); }
+.avatar {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--blue), var(--purple));
+  display: flex; align-items: center; justify-content: center;
+  color: var(--white);
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.user-info { flex: 1; min-width: 0; }
+.user-name { font-size: 13px; font-weight: 600; color: var(--gray-700); }
+.user-plan { font-size: 11px; color: var(--gray-400); }
+
+/* ══════════ MAIN CONTENT ══════════ */
+.main {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg);
+  overflow-y: auto;
+  max-height: 100vh;
+}
+
+/* ══════════ SCREENS ══════════ */
+.screen { display: none; }
+.screen.active { display: block; animation: fadeUp 0.25s ease; }
+@keyframes fadeUp { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+
+/* ══════════ TOP BAR ══════════ */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 28px;
+  background: var(--white);
+  border-bottom: 1px solid var(--gray-200);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+.topbar-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--gray-900);
+  letter-spacing: -0.02em;
+}
+.topbar-right { display: flex; align-items: center; gap: 8px; }
+
+/* Pill Button */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 100px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.pill-blue { background: var(--blue); color: var(--white); }
+.pill-blue:hover { background: var(--blue-dark); }
+.pill-outline { border: 1.5px solid var(--gray-300); color: var(--gray-700); background: var(--white); }
+.pill-outline:hover { border-color: var(--blue); color: var(--blue); }
+.pill-ghost { color: var(--gray-500); }
+.pill-ghost:hover { background: var(--gray-100); color: var(--gray-700); }
+
+/* Mode Switcher */
+.mode-switcher {
+  display: flex;
+  background: var(--gray-100);
+  border-radius: 100px;
+  padding: 3px;
+  gap: 2px;
+}
+.mode-btn {
+  padding: 5px 14px;
+  border-radius: 100px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  color: var(--gray-500);
+  border: none;
+  background: transparent;
+}
+.mode-btn.active { background: var(--white); color: var(--blue); box-shadow: var(--shadow-xs); }
+
+/* Icon Button */
+.icon-btn {
+  width: 34px; height: 34px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--gray-200);
+  background: var(--white);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.15s;
+  color: var(--gray-500);
+}
+.icon-btn:hover { border-color: var(--blue); color: var(--blue); }
+
+/* ══════════ PAGE CONTENT WRAPPER ══════════ */
+.page { padding: 24px 28px; }
+
+/* ══════════ CARDS ══════════ */
+.card {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--r-xl);
+  overflow: hidden;
+  transition: box-shadow 0.15s;
+}
+.card:hover { box-shadow: var(--shadow-md); }
+.card-body { padding: 20px 22px; }
+.card-sm { border-radius: var(--r-lg); }
+.card-blue { background: var(--blue); border-color: var(--blue); }
+.card-green { background: var(--green); border-color: var(--green); }
+
+/* ══════════ TAGS / BADGES ══════════ */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.tag-blue { background: var(--blue-light); color: var(--blue); }
+.tag-green { background: var(--green-light); color: var(--green-dark); }
+.tag-orange { background: var(--orange-light); color: var(--orange); }
+.tag-purple { background: var(--purple-light); color: #8B2FD4; }
+.tag-gray { background: var(--gray-100); color: var(--gray-500); }
+
+/* ══════════ GRID LAYOUTS ══════════ */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.span-2 { grid-column: span 2; }
+
+/* ══════════ STAT CARDS ══════════ */
+.stat-card {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--r-lg);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.stat-label { font-size: 11px; font-weight: 500; color: var(--gray-400); text-transform: uppercase; letter-spacing: 0.05em; }
+.stat-value { font-size: 28px; font-weight: 700; letter-spacing: -0.03em; color: var(--gray-900); line-height: 1; }
+.stat-sub { font-size: 12px; color: var(--gray-500); }
+.stat-blue .stat-value { color: var(--blue); }
+.stat-green .stat-value { color: var(--green-dark); }
+.stat-orange .stat-value { color: var(--orange); }
+.stat-purple .stat-value { color: #8B2FD4; }
+
+/* ══════════ PROGRESS BAR ══════════ */
+.progress-wrap {
+  height: 6px;
+  background: var(--gray-100);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.8s cubic-bezier(0.4,0,0.2,1);
+}
+.progress-blue { background: var(--blue); }
+.progress-green { background: var(--green-dark); }
+.progress-orange { background: var(--orange); }
+.progress-gradient { background: linear-gradient(90deg, var(--blue), var(--purple)); }
+
+/* ══════════ SECTION TITLES ══════════ */
+.section-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--gray-900);
+  letter-spacing: -0.02em;
+  margin-bottom: 14px;
+}
+.section-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.section-row .section-title { margin-bottom: 0; }
+.see-all {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--blue);
+  cursor: pointer;
+}
+
+/* ══════════ SEARCH BAR ══════════ */
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--white);
+  border: 1.5px solid var(--gray-200);
+  border-radius: var(--r-xl);
+  padding: 11px 18px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.search-bar:hover, .search-bar:focus-within { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(82,96,254,0.08); }
+.search-icon { font-size: 16px; color: var(--gray-400); }
+.search-text { flex: 1; font-size: 14px; color: var(--gray-400); font-weight: 400; }
+.search-kbd {
+  font-size: 11px;
+  background: var(--gray-100);
+  border: 1px solid var(--gray-200);
+  color: var(--gray-400);
+  padding: 2px 7px;
+  border-radius: var(--r-xs);
+  font-family: var(--font);
+}
+
+/* ══════════ LIST ITEMS ══════════ */
+.list-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.list-item:hover { background: var(--gray-100); }
+.list-icon {
+  width: 40px; height: 40px;
+  border-radius: var(--r-sm);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.list-body { flex: 1; min-width: 0; }
+.list-title { font-size: 14px; font-weight: 600; color: var(--gray-900); margin-bottom: 2px; }
+.list-sub { font-size: 12px; color: var(--gray-500); }
+.list-right { text-align: right; flex-shrink: 0; }
+.list-value { font-size: 15px; font-weight: 700; color: var(--gray-900); }
+.list-label { font-size: 11px; color: var(--gray-400); }
+
+/* ══════════ CHART BARS ══════════ */
+.bar-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 88px;
+}
+.bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.bar {
+  width: 100%;
+  border-radius: var(--r-xs) var(--r-xs) 0 0;
+  transition: opacity 0.2s;
+  cursor: pointer;
+  min-height: 6px;
+}
+.bar:hover { opacity: 0.8; }
+.bar-label { font-size: 9px; font-weight: 500; color: var(--gray-400); letter-spacing: -0.01em; }
+
+/* ══════════ DOUGHNUT (SVG) ══════════ */
+.ring-wrap { position: relative; width: 80px; height: 80px; }
+.ring-center {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+.ring-val { font-size: 20px; font-weight: 700; letter-spacing: -0.03em; color: var(--gray-900); line-height: 1; }
+.ring-unit { font-size: 10px; color: var(--gray-400); font-weight: 500; }
+
+/* ══════════ TABS ══════════ */
+.tabs {
+  display: flex;
+  gap: 2px;
+  background: var(--gray-100);
+  border-radius: var(--r-sm);
+  padding: 3px;
+  width: fit-content;
+}
+.tab-btn {
+  padding: 5px 14px;
+  border-radius: var(--r-xs);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--gray-500);
+  transition: all 0.15s;
+  border: none;
+  background: transparent;
+}
+.tab-btn.active {
+  background: var(--white);
+  color: var(--gray-900);
+  box-shadow: var(--shadow-xs);
+}
+
+/* ══════════ FEATURE HIGHLIGHT ══════════ */
+.feature-card {
+  background: var(--blue);
+  border-radius: var(--r-xl);
+  padding: 24px;
+  color: var(--white);
+  position: relative;
+  overflow: hidden;
+}
+.feature-card::before {
+  content: '';
+  position: absolute;
+  top: -40px; right: -40px;
+  width: 160px; height: 160px;
+  background: rgba(255,255,255,0.07);
+  border-radius: 50%;
+}
+.feature-card::after {
+  content: '';
+  position: absolute;
+  bottom: -20px; right: 20px;
+  width: 100px; height: 100px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 50%;
+}
+.feature-tag {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(255,255,255,0.18);
+  border-radius: 100px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+.feature-title {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+  margin-bottom: 6px;
+}
+.feature-sub { font-size: 13px; opacity: 0.75; line-height: 1.5; }
+
+.feature-card.green-card { background: var(--green); }
+.feature-card.green-card .feature-title { color: var(--gray-900); }
+.feature-card.green-card .feature-sub { color: var(--gray-700); opacity: 1; }
+.feature-card.green-card .feature-tag { background: rgba(0,0,0,0.1); color: var(--gray-700); }
+
+/* ══════════ SCORE DISPLAY ══════════ */
+.big-score {
+  font-size: 64px;
+  font-weight: 700;
+  letter-spacing: -0.05em;
+  line-height: 1;
+  color: var(--white);
+}
+.big-score-label {
+  font-size: 13px;
+  opacity: 0.75;
+  margin-top: 4px;
+}
+
+/* ══════════ HORIZONTAL SCROLL ══════════ */
+.hscroll {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.hscroll::-webkit-scrollbar { display: none; }
+
+/* ══════════ COMPACT CARD ══════════ */
+.ccard {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--r-lg);
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.ccard:hover { border-color: var(--blue); box-shadow: var(--shadow-sm); }
+.ccard.selected { border-color: var(--blue); background: var(--blue-light); }
+
+/* ══════════ DIVIDER ══════════ */
+.divider { height: 1px; background: var(--gray-100); margin: 4px 0; }
+
+/* ══════════ ALERT BANNER ══════════ */
+.alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: var(--r-md);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.alert-orange { background: var(--orange-light); border: 1px solid #FFCAB3; color: #C04A1E; }
+.alert-blue   { background: var(--blue-light);   border: 1px solid var(--blue-mid); color: var(--blue-dark); }
+.alert-green  { background: var(--green-light);  border: 1px solid #A0F098; color: var(--green-dark); }
+.alert-icon { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+
+/* ══════════ IMPACT ROW ══════════ */
+.impact-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  background: var(--green-light);
+  border: 1px solid #A0F098;
+  border-radius: var(--r-lg);
+}
+.impact-icon { font-size: 24px; }
+.impact-body { flex: 1; }
+.impact-title { font-size: 13px; font-weight: 600; color: var(--gray-900); margin-bottom: 2px; }
+.impact-sub { font-size: 12px; color: var(--gray-500); }
+.impact-num { font-size: 22px; font-weight: 700; color: var(--green-dark); letter-spacing: -0.03em; }
+
+/* ══════════ FORECAST STRIP ══════════ */
+.forecast-day {
+  flex-shrink: 0;
+  width: 60px;
+  text-align: center;
+  padding: 10px 8px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--gray-200);
+  background: var(--white);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.forecast-day:hover { border-color: var(--blue); }
+.forecast-day.today { background: var(--blue); border-color: var(--blue); color: var(--white); }
+.fd-day { font-size: 10px; font-weight: 600; color: var(--gray-400); margin-bottom: 6px; }
+.fd-day-today { color: rgba(255,255,255,0.7); }
+.fd-icon { font-size: 20px; margin-bottom: 6px; }
+.fd-temp { font-size: 13px; font-weight: 700; color: var(--gray-900); }
+.fd-temp-today { color: var(--white); }
+
+/* ══════════ ANIMATIONS ══════════ */
+.stagger > * { opacity: 0; animation: fadeUp 0.3s ease forwards; }
+.stagger > *:nth-child(1) { animation-delay: 0.03s; }
+.stagger > *:nth-child(2) { animation-delay: 0.07s; }
+.stagger > *:nth-child(3) { animation-delay: 0.11s; }
+.stagger > *:nth-child(4) { animation-delay: 0.15s; }
+.stagger > *:nth-child(5) { animation-delay: 0.19s; }
+.stagger > *:nth-child(6) { animation-delay: 0.23s; }
+
+/* ══════════ SCROLLBAR ══════════ */
+.main::-webkit-scrollbar { width: 4px; }
+.main::-webkit-scrollbar-track { background: transparent; }
+.main::-webkit-scrollbar-thumb { background: var(--gray-200); border-radius: 2px; }
+
+/* ══════════════════════════════════════
+   WEATHER THEMES — 8가지 날씨 상태별 테마
+   각 테마는 hero card, accent, badge, alert 색상을 변경
+══════════════════════════════════════ */
+
+/* 맑음 */
+body.wx-sunny {
+  --wx-hero-from:   #FFB300;
+  --wx-hero-to:     #FF8C00;
+  --wx-accent:      #B45309;
+  --wx-accent-fill: #FF8C00;
+  --wx-badge-bg:    #FEF3C7;
+  --wx-badge-text:  #92400E;
+  --wx-alert-bg:    #FFFBEB;
+  --wx-alert-border:#FDE68A;
+  --wx-alert-text:  #92400E;
+  --wx-icon:        '☀️';
+  --wx-name:        '맑음';
+}
+/* 소나기 */
+body.wx-shower {
+  --wx-hero-from:   #38BDF8;
+  --wx-hero-to:     #0284C7;
+  --wx-accent:      #0369A1;
+  --wx-accent-fill: #0EA5E9;
+  --wx-badge-bg:    #E0F2FE;
+  --wx-badge-text:  #0C4A6E;
+  --wx-alert-bg:    #F0F9FF;
+  --wx-alert-border:#BAE6FD;
+  --wx-alert-text:  #075985;
+}
+/* 흐림 */
+body.wx-cloudy {
+  --wx-hero-from:   #94A3B8;
+  --wx-hero-to:     #475569;
+  --wx-accent:      #475569;
+  --wx-accent-fill: #64748B;
+  --wx-badge-bg:    #F1F5F9;
+  --wx-badge-text:  #334155;
+  --wx-alert-bg:    #F8FAFC;
+  --wx-alert-border:#CBD5E1;
+  --wx-alert-text:  #334155;
+}
+/* 눈 */
+body.wx-snow {
+  --wx-hero-from:   #93C5FD;
+  --wx-hero-to:     #3B82F6;
+  --wx-accent:      #1D4ED8;
+  --wx-accent-fill: #60A5FA;
+  --wx-badge-bg:    #EFF6FF;
+  --wx-badge-text:  #1E3A8A;
+  --wx-alert-bg:    #EFF6FF;
+  --wx-alert-border:#BFDBFE;
+  --wx-alert-text:  #1E40AF;
+}
+/* 폭염 */
+body.wx-heat {
+  --wx-hero-from:   #F97316;
+  --wx-hero-to:     #DC2626;
+  --wx-accent:      #B91C1C;
+  --wx-accent-fill: #EF4444;
+  --wx-badge-bg:    #FEE2E2;
+  --wx-badge-text:  #7F1D1D;
+  --wx-alert-bg:    #FFF5F5;
+  --wx-alert-border:#FCA5A5;
+  --wx-alert-text:  #991B1B;
+}
+/* 한파 */
+body.wx-cold {
+  --wx-hero-from:   #3B82F6;
+  --wx-hero-to:     #1E3A8A;
+  --wx-accent:      #1E3A8A;
+  --wx-accent-fill: #3B82F6;
+  --wx-badge-bg:    #EFF6FF;
+  --wx-badge-text:  #1E3A8A;
+  --wx-alert-bg:    #EFF6FF;
+  --wx-alert-border:#BFDBFE;
+  --wx-alert-text:  #1E40AF;
+}
+/* 하루종일 비 */
+body.wx-rain {
+  --wx-hero-from:   #4F86C6;
+  --wx-hero-to:     #1E40AF;
+  --wx-accent:      #1D4ED8;
+  --wx-accent-fill: #3B82F6;
+  --wx-badge-bg:    #DBEAFE;
+  --wx-badge-text:  #1E3A8A;
+  --wx-alert-bg:    #EFF6FF;
+  --wx-alert-border:#93C5FD;
+  --wx-alert-text:  #1E40AF;
+}
+/* 안개 */
+body.wx-fog {
+  --wx-hero-from:   #94A3B8;
+  --wx-hero-to:     #64748B;
+  --wx-accent:      #475569;
+  --wx-accent-fill: #94A3B8;
+  --wx-badge-bg:    #F1F5F9;
+  --wx-badge-text:  #334155;
+  --wx-alert-bg:    #F8FAFC;
+  --wx-alert-border:#CBD5E1;
+  --wx-alert-text:  #475569;
+}
+
+/* 날씨 테마 적용 — hero card & feature card */
+body[class*="wx-"] .feature-card:not(.green-card) {
+  background: linear-gradient(135deg, var(--wx-hero-from), var(--wx-hero-to));
+}
+body[class*="wx-"] .tag-blue {
+  background: var(--wx-badge-bg);
+  color: var(--wx-badge-text);
+}
+body[class*="wx-"] .alert-blue {
+  background: var(--wx-alert-bg);
+  border-color: var(--wx-alert-border);
+  color: var(--wx-alert-text);
+}
+body[class*="wx-"] .see-all { color: var(--wx-accent); }
+body[class*="wx-"] .nav-item.active { background: var(--wx-badge-bg); color: var(--wx-accent); }
+body[class*="wx-"] .mode-btn.active { color: var(--wx-accent); }
+body[class*="wx-"] .search-bar:hover { border-color: var(--wx-accent-fill); box-shadow: 0 0 0 3px rgba(0,0,0,0.04); }
+body[class*="wx-"] .pill-blue { background: var(--wx-accent-fill); }
+body[class*="wx-"] .forecast-day.today { background: var(--wx-accent-fill); border-color: var(--wx-accent-fill); }
+body[class*="wx-"] .brand-mark { background: var(--wx-accent-fill); }
+body[class*="wx-"] .avatar { background: linear-gradient(135deg, var(--wx-hero-from), var(--wx-hero-to)); }
+
+/* ══════════════════════════════════════
+   STICKY WEATHER SWITCHER
+══════════════════════════════════════ */
+.wx-switcher {
+  position: fixed;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: 20px;
+  padding: 10px 8px;
+  box-shadow: 0 8px 24px rgba(16,24,40,0.12), 0 2px 8px rgba(16,24,40,0.06);
+}
+.wx-switcher-label {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--gray-400);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  text-align: center;
+  margin-bottom: 2px;
+}
+.wx-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  border: 1.5px solid transparent;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.15s;
+  position: relative;
+}
+.wx-btn:hover {
+  background: var(--gray-100);
+  transform: scale(1.08);
+}
+.wx-btn.active {
+  background: var(--wx-badge-bg, var(--blue-light));
+  border-color: var(--wx-accent-fill, var(--blue));
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+.wx-btn .wx-tooltip {
+  position: absolute;
+  right: 44px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--gray-900);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 8px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.wx-btn .wx-tooltip::after {
+  content: '';
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 5px solid transparent;
+  border-left-color: var(--gray-900);
+}
+.wx-btn:hover .wx-tooltip { opacity: 1; }
+
+/* ══════════════════════════════════════
+   RESPONSIVE — PC / Tablet / Mobile
+   실제 브라우저 width 기반 반응형
+══════════════════════════════════════ */
+
+/* ── PC (1024px 이상) — 기본값, 사이드바 전체 표시 ── */
+@media (min-width: 1024px) {
+  .app { max-width: 1440px; }
+  .sidebar { width: 240px; }
+  .sidebar .brand-name,
+  .sidebar .brand-sub,
+  .sidebar .nav-section-label,
+  .sidebar .nav-item span:not(.nav-icon):not(.nav-badge),
+  .sidebar .user-info { display: block; }
+  .page { padding: 24px 28px; }
+  .grid-4 { grid-template-columns: repeat(4, 1fr); }
+  .grid-3 { grid-template-columns: repeat(3, 1fr); }
+  .grid-2 { grid-template-columns: 1fr 1fr; }
+  .topbar { padding: 16px 28px; }
+  .wx-switcher { right: 20px; }
+  .mobile-bottom-nav { display: none; }
+}
+
+/* ── Tablet (768px ~ 1023px) — 사이드바 아이콘만 ── */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .app { max-width: 100%; }
+
+  /* 사이드바 축소 */
+  .sidebar {
+    width: 64px;
+    padding: 16px 8px;
+    overflow: visible;
+  }
+  .sidebar .brand { padding: 6px 6px 14px; justify-content: center; }
+  .sidebar .brand-name,
+  .sidebar .brand-sub { display: none; }
+  .sidebar .nav-section-label { display: none; }
+  .sidebar .nav-item {
+    justify-content: center;
+    padding: 10px;
+    position: relative;
+  }
+  .sidebar .nav-item span:not(.nav-icon):not(.nav-badge) { display: none; }
+  .sidebar .nav-badge { position: absolute; top: 4px; right: 4px; min-width: 14px; padding: 1px 4px; font-size: 9px; }
+  .sidebar .sidebar-footer { display: none; }
+
+  /* 툴팁 on hover */
+  .sidebar .nav-item::after {
+    content: attr(data-label);
+    position: absolute;
+    left: 70px;
+    background: var(--gray-900);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 5px 10px;
+    border-radius: 8px;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    z-index: 100;
+  }
+  .sidebar .nav-item:hover::after { opacity: 1; }
+
+  /* 컨텐츠 레이아웃 조정 */
+  .page { padding: 18px 20px; }
+  .grid-4 { grid-template-columns: repeat(2, 1fr); }
+  .grid-3 { grid-template-columns: repeat(2, 1fr); }
+  .grid-2 { grid-template-columns: 1fr 1fr; }
+  .topbar { padding: 14px 20px; }
+  .topbar-title { font-size: 16px; }
+
+  /* weather switcher 위치 */
+  .wx-switcher { right: 12px; }
+  .mobile-bottom-nav { display: none; }
+}
+
+/* ── Mobile (767px 이하) — 사이드바 없음, 하단 탭 ── */
+@media (max-width: 767px) {
+  .app {
+    flex-direction: column;
+    max-width: 100%;
+  }
+  .sidebar { display: none; }
+  .main { max-height: none; overflow-y: visible; }
+
+  /* 하단 네비게이션 */
+  .mobile-bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: var(--white);
+    border-top: 1px solid var(--gray-200);
+    z-index: 100;
+    padding-bottom: env(safe-area-inset-bottom);
+    box-shadow: 0 -4px 12px rgba(16,24,40,0.06);
+  }
+  .mob-nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 8px 4px;
+    cursor: pointer;
+    color: var(--gray-400);
+    font-size: 10px;
+    font-weight: 600;
+    transition: all 0.15s;
+    border: none;
+    background: transparent;
+    font-family: var(--font);
+  }
+  .mob-nav-item:hover,
+  .mob-nav-item.active { color: var(--wx-accent-fill, var(--blue)); }
+  .mob-nav-icon { font-size: 20px; line-height: 1; }
+
+  /* 페이지 컨텐츠에 하단 네비 높이만큼 패딩 */
+  .page { padding: 16px; padding-bottom: 80px; }
+  .screen { padding-bottom: 0; }
+
+  /* 레이아웃 조정 */
+  .grid-4 { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .grid-3 { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .grid-2 { grid-template-columns: 1fr; }
+  .span-2 { grid-column: span 1; }
+
+  /* topbar */
+  .topbar { padding: 12px 16px; }
+  .topbar-title { font-size: 15px; }
+  .topbar-right .mode-switcher { display: none; } /* 모바일엔 모드 스위처 숨김 */
+  .topbar-right .pill-outline { display: none; }
+
+  /* 날씨 스위처 */
+  .wx-switcher {
+    right: 10px;
+    padding: 8px 6px;
+    gap: 4px;
+  }
+  .wx-btn { width: 32px; height: 32px; font-size: 16px; border-radius: 10px; }
+  .wx-btn .wx-tooltip { right: 40px; font-size: 10px; }
+
+  /* feature card */
+  .feature-card { padding: 18px; }
+  .feature-title { font-size: 18px; }
+  .big-score { font-size: 52px; }
+
+  /* stat card */
+  .stat-value { font-size: 22px; }
+
+  /* bar chart */
+  .bar-label { font-size: 8px; }
+}
+
+/* 날씨 스위처 모바일에서 화면 가리지 않도록 */
+@media (max-width: 767px) {
+  .page { padding-right: 60px; } /* 스위처 공간 확보 */
+}
+
+</style>
+</head>
+<body class="wx-sunny">
+
+<!-- ══════ STICKY WEATHER SWITCHER ══════ -->
+<div class="wx-switcher" id="wxSwitcher">
+  <div class="wx-switcher-label">날씨</div>
+  <button class="wx-btn active" onclick="setWeather(this,'wx-sunny')" title="맑음">
+    ☀️<span class="wx-tooltip">☀️ 맑음</span>
+  </button>
+  <button class="wx-btn" onclick="setWeather(this,'wx-shower')" title="소나기">
+    🌦️<span class="wx-tooltip">🌦️ 소나기</span>
+  </button>
+  <button class="wx-btn" onclick="setWeather(this,'wx-cloudy')" title="흐림">
+    ☁️<span class="wx-tooltip">☁️ 흐림</span>
+  </button>
+  <button class="wx-btn" onclick="setWeather(this,'wx-snow')" title="눈">
+    ❄️<span class="wx-tooltip">❄️ 눈</span>
+  </button>
+  <button class="wx-btn" onclick="setWeather(this,'wx-heat')" title="폭염">
+    🌡️<span class="wx-tooltip">🌡️ 폭염</span>
+  </button>
+  <button class="wx-btn" onclick="setWeather(this,'wx-cold')" title="한파">
+    🥶<span class="wx-tooltip">🥶 한파</span>
+  </button>
+  <button class="wx-btn" onclick="setWeather(this,'wx-rain')" title="하루종일 비">
+    🌧️<span class="wx-tooltip">🌧️ 종일비</span>
+  </button>
+  <button class="wx-btn" onclick="setWeather(this,'wx-fog')" title="안개">
+    🌫️<span class="wx-tooltip">🌫️ 안개</span>
+  </button>
+</div>
+
+<div class="app">
+
+  <!-- ════════ SIDEBAR ════════ -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">C</div>
+      <div>
+        <div class="brand-name">Climate</div>
+        <div class="brand-sub">날씨 기반 여행 서비스</div>
+      </div>
+    </div>
+
+    <div class="nav-section-label">메인</div>
+    <div class="nav-item active" onclick="go('home')" data-s="home">
+      <span class="nav-icon">🏠</span> 홈
+    </div>
+    <div class="nav-item" onclick="go('score')" data-s="score">
+      <span class="nav-icon">🌡️</span> Climate Score™
+    </div>
+    <div class="nav-item" onclick="go('hidden')" data-s="hidden">
+      <span class="nav-icon">✦</span> 숨은 황금 시즌
+    </div>
+    <div class="nav-item" onclick="go('compare')" data-s="compare">
+      <span class="nav-icon">⚖️</span> 도시 비교
+    </div>
+
+    <div class="nav-section-label" style="margin-top:8px">내 여행</div>
+    <div class="nav-item" onclick="go('dday')" data-s="dday">
+      <span class="nav-icon">📅</span> D-day 알림
+      <span class="nav-badge">D-12</span>
+    </div>
+    <div class="nav-item" onclick="go('couple')" data-s="couple">
+      <span class="nav-icon">💑</span> 커플 모드
+    </div>
+    <div class="nav-item" onclick="go('family')" data-s="family">
+      <span class="nav-icon">👨‍👩‍👧</span> 가족 모드
+    </div>
+
+    <div class="nav-section-label" style="margin-top:8px">임팩트</div>
+    <div class="nav-item" onclick="go('impact')" data-s="impact">
+      <span class="nav-icon">🌱</span> 소셜 임팩트
+      <span class="nav-badge new">NEW</span>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="user-row">
+        <div class="avatar">김</div>
+        <div class="user-info">
+          <div class="user-name">김서준</div>
+          <div class="user-plan">프리미엄 구독 중</div>
+        </div>
+        <span style="font-size:14px;color:var(--gray-400)">⚙️</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ════════ MAIN ════════ -->
+  <main class="main" id="main">
+
+    <!-- ═══ HOME SCREEN ═══ -->
+    <div class="screen active" id="s-home">
+      <div class="topbar">
+        <div>
+          <div class="topbar-title">오늘의 날씨</div>
+          <div style="font-size:12px;color:var(--gray-400);margin-top:1px">2025년 4월 16일 수요일 · 서울</div>
+        </div>
+        <div class="topbar-right">
+          <div class="mode-switcher">
+            <button class="mode-btn active" onclick="setMode(this,'home')">여행자</button>
+            <button class="mode-btn" onclick="setMode(this,'couple')">커플</button>
+            <button class="mode-btn" onclick="setMode(this,'family')">가족</button>
+          </div>
+          <div class="icon-btn">🔔</div>
+          <div class="icon-btn">👤</div>
+        </div>
+      </div>
+
+      <div class="page">
+        <!-- SEARCH -->
+        <div class="search-bar" onclick="go('score')" style="margin-bottom:22px">
+          <span class="search-icon">🔍</span>
+          <span class="search-text">여행지와 날짜를 입력하세요 — Climate Score™ 분석</span>
+          <span class="search-kbd">⌘K</span>
+        </div>
+
+        <!-- HERO FEATURE CARD -->
+        <div class="feature-card span-2" style="margin-bottom:14px">
+          <div class="feature-tag">✦ 오늘의 기상 인사이트 <span id="wx-hero-icon">☀️</span></div>
+          <div class="feature-title" id="wx-hero-title">사진 찍기 완벽한 날씨예요</div>
+          <div class="feature-sub" id="wx-hero-sub">골든아워 품질 점수 88점 · 일몰 18:42 · 가시거리 22km · 미세먼지 좋음</div>
+          <div style="display:flex;align-items:center;gap:10px;margin-top:18px;">
+            <button class="pill" style="background:rgba(255,255,255,0.2);color:var(--white);border:1.5px solid rgba(255,255,255,0.3)" onclick="go('couple')">커플 모드로 보기 →</button>
+            <button class="pill" style="background:transparent;color:rgba(255,255,255,0.7)">포토스팟 찾기</button>
+          </div>
+        </div>
+
+        <!-- ALERT (날씨별 동적) -->
+        <div id="wx-alert-wrap" style="display:none"></div>
+
+        <!-- STATS ROW -->
+        <div class="grid-4 stagger" style="margin-bottom:22px">
+          <div class="stat-card stat-blue">
+            <div class="stat-label">현재 기온</div>
+            <div class="stat-value" id="wx-temp">26°</div>
+            <div class="stat-sub" id="wx-feel">체감 24° · 맑음</div>
+          </div>
+          <div class="stat-card stat-green">
+            <div class="stat-label">PM2.5</div>
+            <div class="stat-value" id="wx-pm">15㎍</div>
+            <div class="stat-sub">좋음 (WHO 기준)</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">강수 확률</div>
+            <div class="stat-value" id="wx-rain" style="color:var(--gray-500)">3%</div>
+            <div class="stat-sub">우산 불필요</div>
+          </div>
+          <div class="stat-card stat-blue">
+            <div class="stat-label">관광 쾌적도</div>
+            <div class="stat-value" id="wx-comfort">92</div>
+            <div class="stat-sub">우수 / 100점</div>
+          </div>
+        </div>
+
+        <!-- HIDDEN SEASON + CONTENT ROW -->
+        <div class="grid-2" style="margin-bottom:22px">
+          <!-- HIDDEN SEASON -->
+          <div class="feature-card green-card" style="cursor:pointer" onclick="go('hidden')">
+            <div class="feature-tag">✦ 데이터 기반 발견</div>
+            <div class="feature-title" style="font-size:18px">강릉, 10월이<br>8월보다 좋다?</div>
+            <div class="feature-sub" style="margin-bottom:16px">70년 역사 데이터가 말하는<br>숨겨진 황금 시즌</div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="display:flex;flex-direction:column;align-items:center;">
+                <span style="font-size:20px;font-weight:700;color:var(--orange)">52</span>
+                <span style="font-size:10px;color:var(--gray-500)">8월 TCI</span>
+              </span>
+              <span style="color:var(--gray-400);font-size:16px;margin:0 4px">→</span>
+              <span style="display:flex;flex-direction:column;align-items:center;">
+                <span style="font-size:20px;font-weight:700;color:var(--green-dark)">78</span>
+                <span style="font-size:10px;color:var(--gray-500)">10월 TCI</span>
+              </span>
+              <span class="tag tag-green" style="margin-left:auto">+26점</span>
+            </div>
+          </div>
+
+          <!-- CONTENT CARDS -->
+          <div style="display:flex;flex-direction:column;gap:10px;" id="wx-contents">
+            <div class="list-item" style="background:var(--white);border:1px solid var(--gray-200);border-radius:var(--r-lg)">
+              <div class="list-icon" style="background:var(--blue-light)">📸</div>
+              <div class="list-body">
+                <div class="list-title">한강 노을 포토스팟</div>
+                <div class="list-sub">골든아워 92점 · 일몰 18:42</div>
+              </div>
+              <span class="tag tag-blue">지금 최적</span>
+            </div>
+            <div class="list-item" style="background:var(--white);border:1px solid var(--gray-200);border-radius:var(--r-lg)">
+              <div class="list-icon" style="background:var(--green-light)">🌸</div>
+              <div class="list-body">
+                <div class="list-title">창덕궁 후원 산책</div>
+                <div class="list-sub">체감 24° · 맑음 지속</div>
+              </div>
+              <span class="tag tag-green">추천</span>
+            </div>
+            <div class="list-item" style="background:var(--white);border:1px solid var(--gray-200);border-radius:var(--r-lg)">
+              <div class="list-icon" style="background:var(--orange-light)">☕</div>
+              <div class="list-body">
+                <div class="list-title">야외 테라스 카페</div>
+                <div class="list-sub">바람 없음 · 쾌적 지수 92</div>
+              </div>
+              <span class="tag tag-orange">인기</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- IMPACT ROW -->
+        <div class="impact-row">
+          <span class="impact-icon">🌿</span>
+          <div class="impact-body">
+            <div class="impact-title">이번 달 비수기 여행 기여</div>
+            <div class="impact-sub">소멸위기 지역 방문 예약 · SDG 11 지역활성화</div>
+          </div>
+          <div style="text-align:right">
+            <div class="impact-num">2,847</div>
+            <div style="font-size:11px;color:var(--gray-500)">명이 참여 중</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ CLIMATE SCORE SCREEN ═══ -->
+    <div class="screen" id="s-score">
+      <div class="topbar">
+        <div class="topbar-title">Climate Score™</div>
+        <div class="topbar-right">
+          <button class="pill pill-outline" onclick="go('compare')">⚖️ 도시 비교</button>
+          <div class="icon-btn">🔖</div>
+        </div>
+      </div>
+
+      <div class="page">
+        <!-- DESTINATION INPUT -->
+        <div class="grid-2" style="margin-bottom:18px">
+          <div style="background:var(--white);border:1.5px solid var(--blue);border-radius:var(--r-lg);padding:14px 18px;box-shadow:0 0 0 3px rgba(82,96,254,0.08);">
+            <div style="font-size:10px;font-weight:600;color:var(--blue);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">목적지</div>
+            <div style="font-size:16px;font-weight:700;color:var(--gray-900)">제주도</div>
+            <div style="font-size:11px;color:var(--gray-400)">국내 · 제주특별자치도</div>
+          </div>
+          <div style="background:var(--white);border:1.5px solid var(--gray-200);border-radius:var(--r-lg);padding:14px 18px;cursor:pointer" onclick="this.style.borderColor='var(--blue)'">
+            <div style="font-size:10px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">여행 시기</div>
+            <div style="font-size:16px;font-weight:700;color:var(--gray-900)">10월 2주차</div>
+            <div style="font-size:11px;color:var(--gray-400)">2025.10.08 ~ 10.14</div>
+          </div>
+        </div>
+
+        <!-- SCORE HERO -->
+        <div class="feature-card span-2" style="margin-bottom:18px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between">
+            <div>
+              <div class="feature-tag">70년 역사 데이터 기반 분석</div>
+              <div class="big-score">76</div>
+              <div class="big-score-label">우수 · Climate Score™ / 100</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:28px;margin-bottom:4px">🌤️</div>
+              <span style="background:rgba(190,251,182,0.25);color:#BEFBB6;font-size:12px;font-weight:700;padding:4px 12px;border-radius:100px;">강력 추천</span>
+            </div>
+          </div>
+          <!-- PERCENTILE BAR -->
+          <div style="margin-top:18px;">
+            <div style="display:flex;justify-content:space-between;font-size:10px;opacity:0.6;margin-bottom:6px">
+              <span>0 최악</span><span>25</span><span>50 보통</span><span>75</span><span>100 최상</span>
+            </div>
+            <div style="height:8px;background:rgba(255,255,255,0.15);border-radius:4px;overflow:hidden;">
+              <div style="height:100%;width:76%;background:linear-gradient(90deg,rgba(255,255,255,0.5),rgba(255,255,255,0.9));border-radius:4px"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- STATS -->
+        <div class="grid-4 stagger" style="margin-bottom:18px">
+          <div class="stat-card stat-green">
+            <div class="stat-label">맑은 날 확률</div>
+            <div class="stat-value">71%</div>
+            <div class="stat-sub">역사 70년 평균</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">강수 확률</div>
+            <div class="stat-value" style="color:var(--orange)">18%</div>
+            <div class="stat-sub">강우일 5.4일</div>
+          </div>
+          <div class="stat-card stat-blue">
+            <div class="stat-label">평균 최고기온</div>
+            <div class="stat-value">22°</div>
+            <div class="stat-sub">쾌적 범위</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">극단 기상 리스크</div>
+            <div class="stat-value" style="color:var(--green-dark)">4%</div>
+            <div class="stat-sub">낮음</div>
+          </div>
+        </div>
+
+        <!-- MONTHLY CHART + PERCENTILE -->
+        <div class="grid-2" style="margin-bottom:18px">
+          <div class="card card-sm" style="padding:18px 20px">
+            <div class="section-row">
+              <div class="section-title" style="margin:0;font-size:14px">월별 Climate Score™</div>
+              <div class="tabs">
+                <button class="tab-btn active">기후</button>
+                <button class="tab-btn" onclick="switchTab(this)">강수</button>
+                <button class="tab-btn" onclick="switchTab(this)">기온</button>
+              </div>
+            </div>
+            <div style="margin-top:16px">
+              <div class="bar-chart">
+                <div class="bar-col"><div class="bar" style="height:42px;background:var(--blue-mid)"></div><span class="bar-label">1</span></div>
+                <div class="bar-col"><div class="bar" style="height:48px;background:var(--blue-mid)"></div><span class="bar-label">2</span></div>
+                <div class="bar-col"><div class="bar" style="height:58px;background:var(--blue-mid)"></div><span class="bar-label">3</span></div>
+                <div class="bar-col"><div class="bar" style="height:74px;background:var(--blue)"></div><span class="bar-label">4</span></div>
+                <div class="bar-col"><div class="bar" style="height:70px;background:var(--blue)"></div><span class="bar-label">5</span></div>
+                <div class="bar-col"><div class="bar" style="height:38px;background:var(--orange)"></div><span class="bar-label">6</span></div>
+                <div class="bar-col"><div class="bar" style="height:30px;background:var(--orange)"></div><span class="bar-label">7</span></div>
+                <div class="bar-col"><div class="bar" style="height:28px;background:var(--orange)"></div><span class="bar-label">8</span></div>
+                <div class="bar-col"><div class="bar" style="height:62px;background:var(--blue)"></div><span class="bar-label">9</span></div>
+                <div class="bar-col">
+                  <div class="bar" style="height:82px;background:var(--blue);position:relative">
+                    <div style="position:absolute;top:-18px;left:50%;transform:translateX(-50%);background:var(--blue);color:var(--white);font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px;white-space:nowrap">76</div>
+                  </div>
+                  <span class="bar-label" style="color:var(--blue);font-weight:700">10</span>
+                </div>
+                <div class="bar-col"><div class="bar" style="height:68px;background:var(--blue)"></div><span class="bar-label">11</span></div>
+                <div class="bar-col"><div class="bar" style="height:44px;background:var(--blue-mid)"></div><span class="bar-label">12</span></div>
+              </div>
+              <div style="display:flex;gap:12px;margin-top:12px">
+                <span style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--gray-500)"><span style="width:8px;height:8px;border-radius:2px;background:var(--blue);display:inline-block"></span>우수</span>
+                <span style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--gray-500)"><span style="width:8px;height:8px;border-radius:2px;background:var(--blue-mid);display:inline-block"></span>보통</span>
+                <span style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--gray-500)"><span style="width:8px;height:8px;border-radius:2px;background:var(--orange);display:inline-block"></span>주의</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- PERCENTILE DETAIL -->
+          <div class="card card-sm" style="padding:18px 20px">
+            <div class="section-title" style="font-size:14px">역사 기후 분포 (1950~2024)</div>
+            <div style="display:flex;flex-direction:column;gap:12px;margin-top:4px">
+              <div>
+                <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px"><span style="color:var(--gray-500)">최악 10%의 경우</span><span style="font-weight:600;color:var(--orange)">15~18°</span></div>
+                <div class="progress-wrap"><div class="progress-fill progress-orange" style="width:25%"></div></div>
+              </div>
+              <div>
+                <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px"><span style="color:var(--gray-500)">일반적인 범위</span><span style="font-weight:600;color:var(--blue)">19~24°</span></div>
+                <div class="progress-wrap"><div class="progress-fill progress-blue" style="width:65%"></div></div>
+              </div>
+              <div>
+                <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px"><span style="color:var(--gray-500)">최상 10%의 경우</span><span style="font-weight:600;color:var(--green-dark)">25~27°</span></div>
+                <div class="progress-wrap"><div class="progress-fill progress-green" style="width:88%"></div></div>
+              </div>
+              <div class="divider"></div>
+              <div class="alert alert-blue" style="padding:10px 12px;font-size:12px">
+                <span class="alert-icon">💡</span>
+                <span>평균값이 아닌 <strong>변동성</strong>까지 반영한 확률 분석이에요. 극단적으로 나쁠 가능성은 4%입니다.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CTA -->
+        <div style="display:flex;gap:10px">
+          <button class="pill pill-blue" style="flex:1;justify-content:center;padding:12px" onclick="go('compare')">⚖️ 다른 도시와 비교하기</button>
+          <button class="pill pill-outline" style="padding:12px 20px" onclick="go('dday')">📅 여행 저장하기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ HIDDEN SEASON SCREEN ═══ -->
+    <div class="screen" id="s-hidden">
+      <div class="topbar">
+        <div class="topbar-title">숨은 황금 시즌</div>
+        <div class="topbar-right">
+          <span class="tag tag-blue">70년 역사 데이터</span>
+        </div>
+      </div>
+
+      <div class="page">
+        <div class="alert alert-green" style="margin-bottom:18px">
+          <span class="alert-icon">✦</span>
+          <span><strong>데이터 기반 발견 —</strong> 마케팅이 만든 성수기와 실제 기후 최적기의 괴리를 70년 역사 데이터로 확인하세요.</span>
+        </div>
+
+        <!-- MAIN COMPARISON -->
+        <div class="feature-card span-2" style="margin-bottom:14px">
+          <div class="feature-tag">역대 TCI 비교</div>
+          <div class="feature-title">강릉 — 10월이 8월보다 26점 높아요</div>
+          <div class="feature-sub">성수기 8월에 몰린 여행자들이 모르는 사실 — 10월 강릉이 훨씬 쾌적합니다</div>
+          <div style="display:flex;align-items:center;gap:20px;margin-top:20px">
+            <div style="text-align:center">
+              <div style="font-size:48px;font-weight:700;color:var(--orange);letter-spacing:-0.05em">52</div>
+              <div style="font-size:12px;color:rgba(255,255,255,0.7)">8월 TCI</div>
+              <div style="margin-top:6px"><span style="background:rgba(254,124,82,0.25);color:var(--orange);font-size:11px;font-weight:600;padding:3px 10px;border-radius:100px">불량</span></div>
+            </div>
+            <div style="flex:1;text-align:center;font-size:24px;opacity:0.5">→</div>
+            <div style="text-align:center">
+              <div style="font-size:48px;font-weight:700;color:var(--green);letter-spacing:-0.05em">78</div>
+              <div style="font-size:12px;color:rgba(255,255,255,0.7)">10월 TCI</div>
+              <div style="margin-top:6px"><span style="background:rgba(190,251,182,0.25);color:var(--green);font-size:11px;font-weight:600;padding:3px 10px;border-radius:100px">우수</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- MORE DISCOVERIES -->
+        <div class="section-title">더 많은 숨겨진 황금 시즌</div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:18px">
+          <div class="list-item" style="background:var(--white);border:1px solid var(--gray-200);border-radius:var(--r-lg)">
+            <div class="list-icon" style="background:var(--blue-light)">🗻</div>
+            <div class="list-body">
+              <div class="list-title">제주도 11월</div>
+              <div class="list-sub">동백꽃 절정 · 인파 없음 · TCI 72점</div>
+            </div>
+            <div class="list-right">
+              <span class="tag tag-blue">비수기</span>
+            </div>
+          </div>
+          <div class="list-item" style="background:var(--white);border:1px solid var(--gray-200);border-radius:var(--r-lg)">
+            <div class="list-icon" style="background:var(--purple-light)">🌊</div>
+            <div class="list-body">
+              <div class="list-title">부산 9월 말</div>
+              <div class="list-sub">수온 최적 · 덜 붐비는 해수욕장 · TCI 74점</div>
+            </div>
+            <div class="list-right">
+              <span class="tag tag-purple">추천</span>
+            </div>
+          </div>
+          <div class="list-item" style="background:var(--white);border:1px solid var(--gray-200);border-radius:var(--r-lg)">
+            <div class="list-icon" style="background:var(--orange-light)">🍁</div>
+            <div class="list-body">
+              <div class="list-title">설악산 10월 초</div>
+              <div class="list-sub">단풍 극성기 · 맑은 날 78% · TCI 81점</div>
+            </div>
+            <div class="list-right">
+              <span class="tag tag-orange">절정기</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- COOLCATION TREND -->
+        <div class="card card-sm" style="padding:20px;margin-bottom:0">
+          <div class="section-title" style="font-size:14px">쿨케이션(Coolcation) 트렌드</div>
+          <div class="grid-2" style="gap:10px">
+            <div class="stat-card">
+              <div class="stat-label">서늘한 목적지 선호</div>
+              <div class="stat-value stat-blue" style="font-size:28px;color:var(--blue)">42%</div>
+              <div class="stat-sub">Booking.com 조사</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">아이슬란드 예약 증가</div>
+              <div class="stat-value" style="font-size:28px;color:var(--green-dark)">+50%</div>
+              <div class="stat-sub">Intrepid Travel</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ COMPARE SCREEN ═══ -->
+    <div class="screen" id="s-compare">
+      <div class="topbar">
+        <div class="topbar-title">도시 비교</div>
+        <div class="topbar-right">
+          <div style="background:var(--gray-100);border-radius:100px;padding:6px 14px;font-size:12px;font-weight:600;color:var(--gray-700)">10월 2주차</div>
+          <button class="pill pill-blue" style="font-size:12px">+ 도시 추가</button>
+        </div>
+      </div>
+
+      <div class="page">
+        <!-- CITY CARDS -->
+        <div class="grid-4 stagger" style="margin-bottom:20px">
+          <div class="ccard selected" style="text-align:center;min-width:0">
+            <div style="font-size:28px;margin-bottom:6px">🇰🇷</div>
+            <div style="font-size:14px;font-weight:700;margin-bottom:2px">제주도</div>
+            <div style="font-size:30px;font-weight:700;color:var(--blue);letter-spacing:-0.04em;line-height:1">76</div>
+            <div style="margin-top:6px"><span class="tag tag-green" style="font-size:10px">★ 1위</span></div>
+          </div>
+          <div class="ccard selected" style="text-align:center;min-width:0">
+            <div style="font-size:28px;margin-bottom:6px">🇯🇵</div>
+            <div style="font-size:14px;font-weight:700;margin-bottom:2px">오키나와</div>
+            <div style="font-size:30px;font-weight:700;color:var(--blue);letter-spacing:-0.04em;line-height:1">68</div>
+            <div style="margin-top:6px"><span class="tag tag-gray">2위</span></div>
+          </div>
+          <div class="ccard" style="text-align:center;min-width:0">
+            <div style="font-size:28px;margin-bottom:6px">🇻🇳</div>
+            <div style="font-size:14px;font-weight:700;margin-bottom:2px">다낭</div>
+            <div style="font-size:30px;font-weight:700;color:var(--gray-500);letter-spacing:-0.04em;line-height:1">71</div>
+            <div style="margin-top:6px"><span class="tag tag-gray">3위</span></div>
+          </div>
+          <div class="ccard" style="text-align:center;min-width:0">
+            <div style="font-size:28px;margin-bottom:6px">🇹🇭</div>
+            <div style="font-size:14px;font-weight:700;margin-bottom:2px">방콕</div>
+            <div style="font-size:30px;font-weight:700;color:var(--orange);letter-spacing:-0.04em;line-height:1">52</div>
+            <div style="margin-top:6px"><span class="tag tag-orange">우기</span></div>
+          </div>
+        </div>
+
+        <!-- COMPARISON CHART -->
+        <div class="card card-sm" style="padding:20px;margin-bottom:14px">
+          <div class="section-row">
+            <div class="section-title" style="margin:0;font-size:14px">상세 지표 비교</div>
+            <div style="display:flex;gap:12px;font-size:11px;color:var(--gray-500)">
+              <span style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:var(--blue);display:inline-block"></span>제주도</span>
+              <span style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:var(--blue-mid);display:inline-block"></span>오키나와</span>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:14px;margin-top:16px">
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--gray-500);margin-bottom:6px"><span>맑은 날 확률</span><div style="display:flex;gap:10px"><span style="color:var(--blue);font-weight:700">71%</span><span style="color:var(--gray-400)">62%</span></div></div>
+              <div style="display:flex;flex-direction:column;gap:3px">
+                <div class="progress-wrap" style="height:5px"><div class="progress-fill progress-blue" style="width:71%"></div></div>
+                <div class="progress-wrap" style="height:5px"><div class="progress-fill" style="width:62%;background:var(--blue-mid)"></div></div>
+              </div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--gray-500);margin-bottom:6px"><span>강수 확률</span><div style="display:flex;gap:10px"><span style="color:var(--blue);font-weight:700">18%</span><span style="color:var(--gray-400)">30%</span></div></div>
+              <div style="display:flex;flex-direction:column;gap:3px">
+                <div class="progress-wrap" style="height:5px"><div class="progress-fill progress-blue" style="width:18%"></div></div>
+                <div class="progress-wrap" style="height:5px"><div class="progress-fill" style="width:30%;background:var(--blue-mid)"></div></div>
+              </div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--gray-500);margin-bottom:6px"><span>평균 기온</span><div style="display:flex;gap:10px"><span style="color:var(--blue);font-weight:700">22°</span><span style="color:var(--gray-400)">28°</span></div></div>
+              <div style="display:flex;flex-direction:column;gap:3px">
+                <div class="progress-wrap" style="height:5px"><div class="progress-fill progress-blue" style="width:55%"></div></div>
+                <div class="progress-wrap" style="height:5px"><div class="progress-fill" style="width:70%;background:var(--blue-mid)"></div></div>
+              </div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--gray-500);margin-bottom:6px"><span>Climate Score™</span><div style="display:flex;gap:10px"><span style="color:var(--blue);font-weight:700">76</span><span style="color:var(--gray-400)">68</span></div></div>
+              <div style="display:flex;flex-direction:column;gap:3px">
+                <div class="progress-wrap" style="height:5px"><div class="progress-fill progress-blue" style="width:76%"></div></div>
+                <div class="progress-wrap" style="height:5px"><div class="progress-fill" style="width:68%;background:var(--blue-mid)"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- VERDICT -->
+        <div style="background:var(--blue-light);border:1.5px solid var(--blue-mid);border-radius:var(--r-lg);padding:18px 20px">
+          <div style="font-size:10px;font-weight:700;color:var(--blue);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px">AI 분석 결론</div>
+          <div style="font-size:18px;font-weight:700;color:var(--gray-900);letter-spacing:-0.02em;margin-bottom:6px">10월에는 제주도가 최선입니다</div>
+          <div style="font-size:13px;color:var(--gray-600);line-height:1.6">맑은 날 71%, 쾌적한 22°, 낮은 강수 확률. 오키나와 대비 기온은 선선하지만 Climate Score™가 8점 높고, 비행 시간도 절반입니다. 비수기라 숙박비도 약 30% 저렴해요.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ D-DAY SCREEN ═══ -->
+    <div class="screen" id="s-dday">
+      <div class="topbar">
+        <div class="topbar-title">D-day 알림</div>
+        <div class="topbar-right">
+          <button class="pill pill-blue">+ 일정 추가</button>
+        </div>
+      </div>
+
+      <div class="page">
+        <!-- HERO DDAY -->
+        <div class="feature-card span-2" style="margin-bottom:18px;text-align:center">
+          <div style="font-size:80px;font-weight:700;letter-spacing:-0.06em;line-height:1;color:var(--white)">D-12</div>
+          <div style="font-size:16px;opacity:0.75;margin-bottom:16px">일 후</div>
+          <div style="font-size:22px;font-weight:700;margin-bottom:4px">💕 100일 기념일 제주 여행</div>
+          <div style="font-size:13px;opacity:0.7">2025년 4월 28일 월요일 · 제주도</div>
+
+          <!-- FORECAST STRIP -->
+          <div class="hscroll" style="margin-top:20px;justify-content:center">
+            <div class="forecast-day"><div class="fd-day">오늘</div><div class="fd-icon">☀️</div><div class="fd-temp">23°</div></div>
+            <div class="forecast-day"><div class="fd-day">내일</div><div class="fd-icon">⛅</div><div class="fd-temp">20°</div></div>
+            <div class="forecast-day"><div class="fd-day">금</div><div class="fd-icon">🌧️</div><div class="fd-temp" style="color:var(--orange)">17°</div></div>
+            <div class="forecast-day"><div class="fd-day">토</div><div class="fd-icon">⛅</div><div class="fd-temp">19°</div></div>
+            <div class="forecast-day today"><div class="fd-day fd-day-today">4/28 ★</div><div class="fd-icon">🌤️</div><div class="fd-temp fd-temp-today">22°</div></div>
+          </div>
+
+          <div style="margin-top:16px;background:rgba(190,251,182,0.15);border:1px solid rgba(190,251,182,0.3);border-radius:var(--r-md);padding:10px 14px;font-size:12px;color:rgba(255,255,255,0.85);text-align:left">
+            ✓ 4월 28일 제주도는 과거 20년 중 14년이 맑음 (70%) — 좋은 날 확률이 높아요!
+          </div>
+        </div>
+
+        <!-- ARCHIVE -->
+        <div class="section-title">우리의 날씨 아카이브</div>
+        <div class="card card-sm" style="overflow:hidden;margin-bottom:14px">
+          <div class="list-item" style="border-bottom:1px solid var(--gray-100)">
+            <div class="list-icon" style="background:var(--blue-light)">❄️</div>
+            <div class="list-body">
+              <div class="list-title">크리스마스 명동 데이트</div>
+              <div class="list-sub">2024.12.25</div>
+            </div>
+            <div class="list-right">
+              <div class="list-value">첫눈 ❄️</div>
+              <div class="list-label">-2° · 설경</div>
+            </div>
+          </div>
+          <div class="list-item" style="border-bottom:1px solid var(--gray-100)">
+            <div class="list-icon" style="background:var(--orange-light)">☀️</div>
+            <div class="list-body">
+              <div class="list-title">첫 만남 기념일</div>
+              <div class="list-sub">2025.01.17</div>
+            </div>
+            <div class="list-right">
+              <div class="list-value">맑음 ☀️</div>
+              <div class="list-label">5° · 쾌청</div>
+            </div>
+          </div>
+          <div class="list-item">
+            <div class="list-icon" style="background:var(--purple-light)">🌤️</div>
+            <div class="list-body">
+              <div class="list-title">발렌타인데이 한강</div>
+              <div class="list-sub">2025.02.14</div>
+            </div>
+            <div class="list-right">
+              <div class="list-value">구름 ⛅</div>
+              <div class="list-label">8° · 포근</div>
+            </div>
+          </div>
+        </div>
+
+        <button class="pill pill-blue" style="width:100%;justify-content:center;padding:12px">📤 날씨 카드로 저장 · SNS 공유</button>
+      </div>
+    </div>
+
+    <!-- ═══ COUPLE MODE SCREEN ═══ -->
+    <div class="screen" id="s-couple">
+      <div class="topbar">
+        <div class="topbar-title">커플 모드</div>
+        <div class="topbar-right">
+          <div class="mode-switcher">
+            <button class="mode-btn" onclick="setMode(this,'home')">여행자</button>
+            <button class="mode-btn active" onclick="setMode(this,'couple')">커플</button>
+            <button class="mode-btn" onclick="setMode(this,'family')">가족</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="page">
+        <!-- GOLDEN HOUR HERO -->
+        <div class="feature-card span-2" style="margin-bottom:14px">
+          <div class="feature-tag">✦ 오늘의 골든아워</div>
+          <div style="display:flex;align-items:flex-end;gap:10px;margin-bottom:6px">
+            <div style="font-size:56px;font-weight:700;letter-spacing:-0.05em;line-height:1;color:var(--white)">18:42</div>
+            <div style="font-size:13px;opacity:0.7;padding-bottom:6px">일몰 시각</div>
+          </div>
+          <div style="height:5px;background:rgba(255,255,255,0.15);border-radius:3px;margin-bottom:8px;overflow:hidden">
+            <div style="width:88%;height:100%;background:linear-gradient(90deg,rgba(255,255,255,0.4),rgba(255,255,255,0.9));border-radius:3px"></div>
+          </div>
+          <div style="font-size:12px;opacity:0.75;margin-bottom:16px">품질 점수 88/100 · 구름량 12% · 노을 색상 예측: "진홍빛 그라데이션"</div>
+          <div class="hscroll">
+            <span class="pill" style="background:rgba(255,255,255,0.2);color:var(--white);border:1.5px solid rgba(255,255,255,0.3);flex-shrink:0">📍 남산타워</span>
+            <span class="pill" style="background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.8);flex-shrink:0">📍 한강 노을공원</span>
+            <span class="pill" style="background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.8);flex-shrink:0">📍 북악 스카이웨이</span>
+            <span class="pill" style="background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.8);flex-shrink:0">📍 인왕산 청운공원</span>
+          </div>
+        </div>
+
+        <!-- STATS -->
+        <div class="grid-3 stagger" style="margin-bottom:14px">
+          <div class="stat-card stat-blue">
+            <div class="stat-label">📸 사진 컨디션</div>
+            <div class="stat-value">92</div>
+            <div class="stat-sub">가시거리 22km</div>
+          </div>
+          <div class="stat-card stat-green">
+            <div class="stat-label">🌅 노을 품질</div>
+            <div class="stat-value">88</div>
+            <div class="stat-sub">구름량 12%</div>
+          </div>
+          <div class="stat-card" style="cursor:pointer" onclick="go('dday')">
+            <div class="stat-label">💕 100일까지</div>
+            <div class="stat-value" style="color:var(--orange)">D-12</div>
+            <div class="stat-sub">4월 28일</div>
+          </div>
+        </div>
+
+        <!-- RECOMMENDED COURSES -->
+        <div class="section-title">오늘 날씨 맞춤 데이트 코스</div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px">
+          <div class="list-item" style="background:var(--white);border:1px solid var(--gray-200);border-radius:var(--r-lg)">
+            <div class="list-icon" style="background:var(--green-light)">🌸</div>
+            <div class="list-body">
+              <div class="list-title">창덕궁 후원 봄 나들이</div>
+              <div class="list-sub">미세먼지 좋음 · 만개한 벚꽃 · 주말 예약 추천</div>
+            </div>
+            <div class="list-right">
+              <div class="list-value" style="color:var(--blue)">98%</div>
+              <div class="list-label">날씨 매칭</div>
+            </div>
+          </div>
+          <div class="list-item" style="background:var(--white);border:1px solid var(--gray-200);border-radius:var(--r-lg)">
+            <div class="list-icon" style="background:var(--blue-light)">🌅</div>
+            <div class="list-body">
+              <div class="list-title">한강 선셋 피크닉</div>
+              <div class="list-sub">일몰 18:42 · 야외 다이닝 적합 · 체감 19°</div>
+            </div>
+            <div class="list-right">
+              <div class="list-value" style="color:var(--blue)">91%</div>
+              <div class="list-label">날씨 매칭</div>
+            </div>
+          </div>
+          <div class="list-item" style="background:var(--white);border:1px solid var(--gray-200);border-radius:var(--r-lg)">
+            <div class="list-icon" style="background:var(--purple-light)">🎡</div>
+            <div class="list-body">
+              <div class="list-title">서울랜드 야외 어트랙션</div>
+              <div class="list-sub">풍속 3m/s · 대기 청명 · 야외 활동 최적</div>
+            </div>
+            <div class="list-right">
+              <div class="list-value" style="color:var(--blue)">85%</div>
+              <div class="list-label">날씨 매칭</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ FAMILY MODE SCREEN ═══ -->
+    <div class="screen" id="s-family">
+      <div class="topbar">
+        <div class="topbar-title">가족 모드</div>
+        <div class="topbar-right">
+          <div class="mode-switcher">
+            <button class="mode-btn" onclick="setMode(this,'home')">여행자</button>
+            <button class="mode-btn" onclick="setMode(this,'couple')">커플</button>
+            <button class="mode-btn active" onclick="setMode(this,'family')">가족</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="page">
+        <!-- SAFETY HERO -->
+        <div style="background:var(--green);border-radius:var(--r-xl);padding:24px;margin-bottom:14px;position:relative;overflow:hidden">
+          <div style="position:absolute;top:-30px;right:-30px;width:140px;height:140px;background:rgba(0,0,0,0.04);border-radius:50%"></div>
+          <div style="font-size:10px;font-weight:700;color:var(--green-dark);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px">어린이 안전 종합지수</div>
+          <div style="display:flex;align-items:center;gap:20px">
+            <div>
+              <div style="font-size:64px;font-weight:700;color:var(--green-dark);letter-spacing:-0.06em;line-height:1">80</div>
+              <div style="font-size:14px;font-weight:700;color:var(--green-dark);margin-top:4px">야외 활동 안전</div>
+            </div>
+            <div style="flex:1">
+              <div style="font-size:13px;color:var(--gray-700);line-height:1.6">오전 10시~오후 3시 야외 활동 권장<br>오후 2시 자외선 차단제 재도포 알림 설정됨</div>
+              <div style="margin-top:10px;height:6px;background:rgba(0,0,0,0.08);border-radius:3px;overflow:hidden">
+                <div style="width:80%;height:100%;background:var(--green-dark);border-radius:3px"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SAFETY METRICS -->
+        <div class="grid-3 stagger" style="margin-bottom:14px">
+          <div class="stat-card stat-green">
+            <div class="stat-label">🌿 PM2.5</div>
+            <div class="stat-value">15㎍</div>
+            <div class="stat-sub">좋음 (WHO)</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">☀️ UV 지수</div>
+            <div class="stat-value" style="color:var(--orange)">UV 3</div>
+            <div class="stat-sub">차단제 SPF30↑</div>
+          </div>
+          <div class="stat-card stat-green">
+            <div class="stat-label">🌡️ 체감온도</div>
+            <div class="stat-value">23°</div>
+            <div class="stat-sub">활동 적합 범위</div>
+          </div>
+          <div class="stat-card stat-green">
+            <div class="stat-label">☔ 강수 확률</div>
+            <div class="stat-value">8%</div>
+            <div class="stat-sub">우산 불필요</div>
+          </div>
+          <div class="stat-card stat-green">
+            <div class="stat-label">💨 풍속</div>
+            <div class="stat-value">3m/s</div>
+            <div class="stat-sub">야외 놀이 가능</div>
+          </div>
+          <div class="stat-card stat-green">
+            <div class="stat-label">👁️ 가시거리</div>
+            <div class="stat-value">22km</div>
+            <div class="stat-sub">황사 없음</div>
+          </div>
+        </div>
+
+        <!-- PLAN B -->
+        <div class="alert alert-orange" style="margin-bottom:12px">
+          <span class="alert-icon">⚠️</span>
+          <div>내일 PM2.5 예상 80㎍ (나쁨) — 플랜 B 실내 코스를 미리 준비했어요</div>
+        </div>
+
+        <div class="section-title">플랜 B — 실내 활동 추천</div>
+        <div class="card card-sm" style="overflow:hidden">
+          <div class="list-item" style="border-bottom:1px solid var(--gray-100)">
+            <div class="list-icon" style="background:var(--orange-light)">🦁</div>
+            <div class="list-body">
+              <div class="list-title">서울어린이대공원 실내 동물원</div>
+              <div class="list-sub">도보 15분 · 무료 입장</div>
+            </div>
+            <span class="tag tag-orange">키즈</span>
+          </div>
+          <div class="list-item" style="border-bottom:1px solid var(--gray-100)">
+            <div class="list-icon" style="background:var(--blue-light)">🔬</div>
+            <div class="list-body">
+              <div class="list-title">국립어린이과학관</div>
+              <div class="list-sub">차량 10분 · 체험 전시 풍부</div>
+            </div>
+            <span class="tag tag-blue">교육</span>
+          </div>
+          <div class="list-item">
+            <div class="list-icon" style="background:var(--purple-light)">🏊</div>
+            <div class="list-body">
+              <div class="list-title">롯데월드 실내 워터파크</div>
+              <div class="list-sub">지하철 20분 · 전일 즐기기 가능</div>
+            </div>
+            <span class="tag tag-purple">액티브</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ IMPACT SCREEN ═══ -->
+    <div class="screen" id="s-impact">
+      <div class="topbar">
+        <div class="topbar-title">소셜 임팩트</div>
+        <div class="topbar-right">
+          <span class="tag tag-green">소셜벤처 판별 추진 중</span>
+        </div>
+      </div>
+
+      <div class="page">
+        <!-- IMPACT HEADLINE -->
+        <div class="feature-card green-card span-2" style="margin-bottom:18px">
+          <div class="feature-tag">단일 기술 · 이중 임팩트</div>
+          <div class="feature-title">하나의 데이터가<br>두 개의 문제를 해결해요</div>
+          <div class="feature-sub">비수기 수요 분산 = 오버투어리즘 완화 + 소멸위기 지역 활성화</div>
+        </div>
+
+        <!-- KPI METRICS -->
+        <div class="grid-2 stagger" style="margin-bottom:18px">
+          <div class="stat-card" style="border-color:rgba(44,158,30,0.3);background:var(--green-light)">
+            <div class="stat-label" style="color:var(--green-dark)">SDG 11 — 지역활성화</div>
+            <div class="stat-value stat-green" style="font-size:40px">2,847</div>
+            <div class="stat-sub">이번 달 소멸위기 지역 방문 예약</div>
+            <div style="margin-top:10px">
+              <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--gray-500);margin-bottom:4px"><span>월 목표 4,500건</span><span style="color:var(--green-dark);font-weight:600">61%</span></div>
+              <div class="progress-wrap"><div class="progress-fill progress-green" style="width:61%"></div></div>
+            </div>
+          </div>
+          <div class="stat-card" style="border-color:rgba(82,96,254,0.25);background:var(--blue-light)">
+            <div class="stat-label" style="color:var(--blue)">SDG 13 — 기후인식</div>
+            <div class="stat-value stat-blue" style="font-size:40px">41K</div>
+            <div class="stat-sub">기후변화 콘텐츠 이번 달 공유</div>
+            <div style="margin-top:10px">
+              <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--gray-500);margin-bottom:4px"><span>월 목표 50K</span><span style="color:var(--blue);font-weight:600">82%</span></div>
+              <div class="progress-wrap"><div class="progress-fill progress-blue" style="width:82%"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SDG LIST -->
+        <div class="section-title">연계 SDGs</div>
+        <div class="card card-sm" style="overflow:hidden">
+          <div class="list-item" style="border-bottom:1px solid var(--gray-100)">
+            <div class="list-icon" style="background:var(--green-light);font-size:14px;font-weight:700;color:var(--green-dark)">11</div>
+            <div class="list-body">
+              <div class="list-title">지속가능한 도시와 공동체</div>
+              <div class="list-sub">소멸위기 지역 비수기 여행 수요 창출</div>
+            </div>
+            <span class="tag tag-green">핵심</span>
+          </div>
+          <div class="list-item" style="border-bottom:1px solid var(--gray-100)">
+            <div class="list-icon" style="background:var(--blue-light);font-size:14px;font-weight:700;color:var(--blue)">13</div>
+            <div class="list-body">
+              <div class="list-title">기후변화 대응</div>
+              <div class="list-sub">70년 기후 트렌드 시각화 → 기후 인식 제고</div>
+            </div>
+            <span class="tag tag-blue">핵심</span>
+          </div>
+          <div class="list-item" style="border-bottom:1px solid var(--gray-100)">
+            <div class="list-icon" style="background:var(--orange-light);font-size:14px;font-weight:700;color:var(--orange)">8</div>
+            <div class="list-body">
+              <div class="list-title">양질의 일자리와 경제성장</div>
+              <div class="list-sub">비수기 여행 제휴 → 지역 사업자 매출 기여</div>
+            </div>
+            <span class="tag tag-orange">연계</span>
+          </div>
+          <div class="list-item">
+            <div class="list-icon" style="background:var(--purple-light);font-size:14px;font-weight:700;color:#8B2FD4">12</div>
+            <div class="list-body">
+              <div class="list-title">책임있는 소비와 생산</div>
+              <div class="list-sub">날씨 트리거 친환경 상품 · 에코커머스</div>
+            </div>
+            <span class="tag tag-purple">연계</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ══════ MOBILE BOTTOM NAV ══════ -->
+<nav class="mobile-bottom-nav">
+  <button class="mob-nav-item active" onclick="go('home')" data-ms="home">
+    <span class="mob-nav-icon">🏠</span>홈
+  </button>
+  <button class="mob-nav-item" onclick="go('score')" data-ms="score">
+    <span class="mob-nav-icon">🌡️</span>스코어
+  </button>
+  <button class="mob-nav-item" onclick="go('hidden')" data-ms="hidden">
+    <span class="mob-nav-icon">✦</span>황금시즌
+  </button>
+  <button class="mob-nav-item" onclick="go('dday')" data-ms="dday">
+    <span class="mob-nav-icon">📅</span>D-day
+  </button>
+  <button class="mob-nav-item" onclick="go('compare')" data-ms="compare">
+    <span class="mob-nav-icon">⚖️</span>비교
+  </button>
+</nav>
+
+<script>
+/* ── NAVIGATION ── */
+function go(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const target = document.getElementById('s-' + id);
+  if (target) target.classList.add('active');
+
+  // sidebar
+  document.querySelectorAll('.nav-item').forEach(n => {
+    n.classList.toggle('active', n.dataset.s === id);
+  });
+
+  // mobile bottom nav
+  document.querySelectorAll('.mob-nav-item').forEach(n => {
+    n.classList.toggle('active', n.dataset.ms === id);
+  });
+
+  // scroll to top
+  const main = document.getElementById('main');
+  if (main) main.scrollTop = 0;
+  window.scrollTo(0, 0);
+}
+
+function setMode(btn, id) {
+  btn.closest('.mode-switcher').querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  go(id);
+}
+
+function switchTab(btn) {
+  btn.closest('.tabs').querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+/* ── WEATHER SWITCHER ── */
+const WX_DATA = {
+  'wx-sunny': {
+    icon: '☀️', name: '맑음', temp: '26°', feel: '24°',
+    desc: '맑고 화창한 날', pm: '15', uv: '6', rain: '3%',
+    heroTitle: '사진 찍기 완벽한 날씨예요',
+    heroSub: '골든아워 품질 점수 88점 · 일몰 18:42 · 가시거리 22km · 미세먼지 좋음',
+    featureIcon: '☀️',
+    alert: null,
+    contents: [
+      { icon: '📸', title: '한강 노을 포토스팟', sub: '골든아워 92점 · 일몰 18:42', tag: '지금 최적', tagClass: 'tag-blue' },
+      { icon: '🌸', title: '창덕궁 후원 산책', sub: '체감 24° · 맑음 지속', tag: '추천', tagClass: 'tag-green' },
+      { icon: '☕', title: '야외 테라스 카페', sub: '바람 없음 · 쾌적 지수 92', tag: '인기', tagClass: 'tag-orange' },
+    ]
+  },
+  'wx-shower': {
+    icon: '🌦️', name: '소나기', temp: '21°', feel: '20°',
+    desc: '오후 소나기 예상', pm: '20', uv: '3', rain: '65%',
+    heroTitle: '오후에 소나기가 옵니다',
+    heroSub: '오후 2~4시 소나기 예상 · 우산 필수 · 오전엔 야외 활동 가능',
+    featureIcon: '🌦️',
+    alert: { type: 'alert-orange', icon: '⚡', msg: '오후 2~4시 사이 소나기 예상 — 우산 챙기세요!' },
+    contents: [
+      { icon: '🏛️', title: '국립박물관 관람', sub: '실내 · 비 피하기 좋음', tag: '실내 추천', tagClass: 'tag-blue' },
+      { icon: '☕', title: '실내 카페 투어', sub: '소나기 대피소 · 포근한 공간', tag: '인기', tagClass: 'tag-orange' },
+      { icon: '🛍️', title: '백화점 쇼핑', sub: '오후 소나기 대비 실내 활동', tag: '대안', tagClass: 'tag-gray' },
+    ]
+  },
+  'wx-cloudy': {
+    icon: '☁️', name: '흐림', temp: '18°', feel: '17°',
+    desc: '흐리고 쌀쌀함', pm: '25', uv: '1', rain: '20%',
+    heroTitle: '흐리지만 나들이는 가능해요',
+    heroSub: '종일 흐린 날씨 · 야외 산책은 가능 · 감성 실내 코스 추천',
+    featureIcon: '☁️',
+    alert: { type: 'alert-blue', icon: '🌥️', msg: '종일 흐린 날씨 — 야외 사진보다 실내 감성 카페를 추천해요' },
+    contents: [
+      { icon: '🎨', title: '갤러리 전시 관람', sub: '흐린 날 감성 예술 투어', tag: '감성', tagClass: 'tag-blue' },
+      { icon: '📚', title: '독립서점 탐방', sub: '체감 17° · 따뜻한 실내', tag: '추천', tagClass: 'tag-green' },
+      { icon: '🍜', title: '맛집 투어', sub: '우울한 날씨엔 맛있는 음식', tag: '인기', tagClass: 'tag-orange' },
+    ]
+  },
+  'wx-snow': {
+    icon: '❄️', name: '눈', temp: '-2°', feel: '-6°',
+    desc: '눈이 내리는 날', pm: '10', uv: '1', rain: '80%',
+    heroTitle: '눈이 내려요 — 설경 즐겨보세요',
+    heroSub: '눈 10cm 이상 예상 · 빙판 주의 · 대중교통 이용 권장',
+    featureIcon: '❄️',
+    alert: { type: 'alert-blue', icon: '❄️', msg: '눈길·빙판 주의! 대중교통 이용을 권장합니다' },
+    contents: [
+      { icon: '⛷️', title: '스키장·눈썰매장', sub: '눈 10cm 이상 · 최적 컨디션', tag: '즐기기', tagClass: 'tag-blue' },
+      { icon: '🏡', title: '한옥마을 설경', sub: '설경 포토스팟 · 로맨틱', tag: '포토', tagClass: 'tag-purple' },
+      { icon: '🍵', title: '따뜻한 전통 찻집', sub: '눈 구경하며 차 한 잔', tag: '힐링', tagClass: 'tag-green' },
+    ]
+  },
+  'wx-heat': {
+    icon: '🌡️', name: '폭염', temp: '38°', feel: '42°',
+    desc: '폭염 경보 발효 중', pm: '35', uv: '11', rain: '5%',
+    heroTitle: '폭염 경보 — 야외 활동을 자제하세요',
+    heroSub: '체감 42° · 오전 10시~오후 5시 야외 자제 · 수분 보충 필수',
+    featureIcon: '🌡️',
+    alert: { type: 'alert-orange', icon: '🚨', msg: '폭염 경보! 오전 10시~오후 5시 야외 활동 자제. 수분 보충 필수!' },
+    contents: [
+      { icon: '🌊', title: '실내 워터파크', sub: '폭염 탈출 최고의 선택', tag: '강추', tagClass: 'tag-orange' },
+      { icon: '❄️', title: '쇼핑몰·대형마트', sub: '냉방 완비 · 무더위 피하기', tag: '시원', tagClass: 'tag-blue' },
+      { icon: '🎬', title: '영화관·멀티플렉스', sub: '냉방 완비 · 블록버스터 시즌', tag: '인기', tagClass: 'tag-green' },
+    ]
+  },
+  'wx-cold': {
+    icon: '🥶', name: '한파', temp: '-12°', feel: '-18°',
+    desc: '한파 경보 발효 중', pm: '8', uv: '1', rain: '10%',
+    heroTitle: '한파 경보 — 외출을 자제하세요',
+    heroSub: '체감 -18° · 방한 준비 철저히 · 어르신·어린이 외출 특히 주의',
+    featureIcon: '🥶',
+    alert: { type: 'alert-blue', icon: '🥶', msg: '한파 경보! 체감 -18° — 방한 준비 철저히. 어르신·어린이 외출 주의!' },
+    contents: [
+      { icon: '♨️', title: '온천·찜질방 힐링', sub: '한파 피하는 최고의 방법', tag: '강추', tagClass: 'tag-orange' },
+      { icon: '🍲', title: '뜨끈한 국밥 맛집', sub: '체감 -18° · 따뜻한 국물 필수', tag: '힐링', tagClass: 'tag-green' },
+      { icon: '🏨', title: '스테이케이션 호텔', sub: '외출 대신 호텔 내 즐기기', tag: '추천', tagClass: 'tag-blue' },
+    ]
+  },
+  'wx-rain': {
+    icon: '🌧️', name: '하루종일 비', temp: '14°', feel: '12°',
+    desc: '종일 강한 비', pm: '12', uv: '1', rain: '95%',
+    heroTitle: '우산 없이는 외출 금지예요',
+    heroSub: '종일 비 · 누적 강수량 50mm 이상 예상 · 저지대 침수 주의',
+    featureIcon: '🌧️',
+    alert: { type: 'alert-blue', icon: '🌊', msg: '종일 비 예보 — 우산 필수, 저지대 침수 주의!' },
+    contents: [
+      { icon: '🎭', title: '뮤지컬·공연 관람', sub: '비 오는 날 최고의 선택', tag: '감성', tagClass: 'tag-blue' },
+      { icon: '🏊', title: '실내 수영장', sub: '빗소리 들으며 수영', tag: '액티브', tagClass: 'tag-green' },
+      { icon: '📖', title: '대형서점·도서관', sub: '빗소리 들으며 독서', tag: '힐링', tagClass: 'tag-orange' },
+    ]
+  },
+  'wx-fog': {
+    icon: '🌫️', name: '안개', temp: '15°', feel: '14°',
+    desc: '짙은 안개 발생', pm: '55', uv: '2', rain: '15%',
+    heroTitle: '짙은 안개 — 이동 시 주의하세요',
+    heroSub: '가시거리 100m 미만 · 운전 시 안개등 필수 · 서행 운전',
+    featureIcon: '🌫️',
+    alert: { type: 'alert-orange', icon: '🌫️', msg: '짙은 안개로 가시거리 100m 미만 — 운전 시 안개등 켜세요!' },
+    contents: [
+      { icon: '🎑', title: '안개 감성 사진 투어', sub: '몽환적 분위기 · 드라마틱 사진', tag: '포토', tagClass: 'tag-purple' },
+      { icon: '🧖', title: '스파·마사지', sub: '안개 낀 날 릴렉스 타임', tag: '힐링', tagClass: 'tag-green' },
+      { icon: '☕', title: '창가 카페 뷰', sub: '안개 뷰가 예쁜 카페 추천', tag: '감성', tagClass: 'tag-blue' },
+    ]
+  },
+};
+
+let curWx = 'wx-sunny';
+
+function setWeather(btn, wxClass) {
+  // 1. body class 교체
+  const bodyClasses = document.body.className
+    .split(' ')
+    .filter(c => !c.startsWith('wx-'));
+  document.body.className = [...bodyClasses, wxClass].join(' ');
+  curWx = wxClass;
+
+  // 2. 버튼 active 상태
+  document.querySelectorAll('.wx-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  // 3. 날씨 데이터로 화면 콘텐츠 업데이트
+  updateWeatherContent(wxClass);
+}
+
+function updateWeatherContent(wxClass) {
+  const d = WX_DATA[wxClass];
+  if (!d) return;
+
+  // Hero 카드 내용
+  const heroTitle = document.getElementById('wx-hero-title');
+  const heroSub = document.getElementById('wx-hero-sub');
+  const heroIcon = document.getElementById('wx-hero-icon');
+  if (heroTitle) heroTitle.textContent = d.heroTitle;
+  if (heroSub) heroSub.textContent = d.heroSub;
+  if (heroIcon) heroIcon.textContent = d.featureIcon;
+
+  // 날씨 지표
+  const el = (id) => document.getElementById(id);
+  if (el('wx-temp'))   el('wx-temp').textContent   = d.temp;
+  if (el('wx-feel'))   el('wx-feel').textContent   = `체감 ${d.feel} · ${d.desc}`;
+  if (el('wx-pm'))     el('wx-pm').textContent     = d.pm + '㎍';
+  if (el('wx-uv'))     el('wx-uv').textContent     = 'UV ' + d.uv;
+  if (el('wx-rain'))   el('wx-rain').textContent   = d.rain;
+
+  // 쾌적도 — 날씨별 계산
+  const comfortMap = { 'wx-sunny':92,'wx-shower':44,'wx-cloudy':55,'wx-snow':35,'wx-heat':12,'wx-cold':8,'wx-rain':20,'wx-fog':38 };
+  if (el('wx-comfort')) el('wx-comfort').textContent = comfortMap[wxClass] ?? 70;
+
+  // 경보 배너
+  const alertWrap = document.getElementById('wx-alert-wrap');
+  if (alertWrap) {
+    if (d.alert) {
+      alertWrap.innerHTML = `
+        <div class="alert ${d.alert.type}" style="margin-bottom:16px">
+          <span class="alert-icon">${d.alert.icon}</span>
+          <span>${d.alert.msg}</span>
+        </div>`;
+      alertWrap.style.display = 'block';
+    } else {
+      alertWrap.innerHTML = '';
+      alertWrap.style.display = 'none';
+    }
+  }
+
+  // 콘텐츠 리스트 업데이트
+  const contentsWrap = document.getElementById('wx-contents');
+  if (contentsWrap) {
+    contentsWrap.innerHTML = d.contents.map(c => `
+      <div class="list-item" style="background:var(--white);border:1px solid var(--gray-200);border-radius:var(--r-lg)">
+        <div class="list-icon" style="background:var(--gray-100)">${c.icon}</div>
+        <div class="list-body">
+          <div class="list-title">${c.title}</div>
+          <div class="list-sub">${c.sub}</div>
+        </div>
+        <span class="tag ${c.tagClass}">${c.tag}</span>
+      </div>`).join('');
+  }
+}
+
+/* ── INIT ── */
+document.addEventListener('DOMContentLoaded', () => {
+  // sidebar nav data-label 자동 할당
+  document.querySelectorAll('.nav-item[data-s]').forEach(n => {
+    const txt = n.querySelector('span:not(.nav-icon):not(.nav-badge)');
+    if (txt) n.setAttribute('data-label', txt.textContent.trim());
+  });
+  // 초기 날씨 컨텐츠 반영
+  updateWeatherContent('wx-sunny');
+});
+</script>
+</body>
+</html>
